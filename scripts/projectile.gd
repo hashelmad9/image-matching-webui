@@ -37,10 +37,12 @@ func tint(colour: Color) -> void:
 
 func _apply_tint() -> void:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = _tint
-	# Unshaded keeps tracers readable against dark geometry, without depending
-	# on where the arena lights happen to fall.
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Emission above 1.0 is what pushes the tracer past the environment's glow
+	# threshold; a plain albedo colour caps at 1.0 and would never bloom.
+	material.albedo_color = _tint.darkened(0.6)
+	material.emission_enabled = true
+	material.emission = _tint
+	material.emission_energy_multiplier = 6.0
 	_mesh.material_override = material
 
 

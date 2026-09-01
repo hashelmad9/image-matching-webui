@@ -18,8 +18,8 @@ no excuse for shipping unverified changes:
 godot --headless --path . --script res://tests/run_tests.gd
 
 # Renders a real four-player frame to docs/split-screen.png. Look at it.
-xvfb-run godot --path . --rendering-driver opengl3 \
-    --rendering-method gl_compatibility --script res://tests/screenshot.gd
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    xvfb-run godot --path . --script res://tests/screenshot.gd
 ```
 
 Both must pass before committing. If you touch anything visual — lighting,
@@ -27,11 +27,16 @@ camera framing, arena layout, HUD — re-render and actually open the image. The
 first version of this arena was too dark to play, and only looking at the
 render caught it.
 
-On Linux, rendering needs `xvfb` and Mesa:
+On Linux, rendering needs `xvfb` and Mesa's software Vulkan driver:
 
 ```bash
-apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0
+apt-get install -y xvfb mesa-vulkan-drivers vulkan-tools libgl1-mesa-dri
 ```
+
+Render through Forward+, not the compatibility renderer — compatibility has no
+SSAO and would misrepresent the shipping look. Be aware that software Vulkan
+**does not draw directional shadows**, so the render understates reality and
+shadow tuning can only be judged on real hardware. See `docs/ASSETS.md`.
 
 ## Rules of the road
 

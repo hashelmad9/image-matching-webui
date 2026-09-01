@@ -95,6 +95,27 @@ character root, so the `Root/Skeleton3D:bone` track paths resolve against our
 skeleton without rewriting. The clips also import non-looping, so `loop_mode`
 is set explicitly.
 
+## What the headless render can and cannot show
+
+`tests/screenshot.gd` renders through Forward+ using software Vulkan
+(lavapipe), which is what makes a screenshot possible on a machine with no GPU:
+
+```bash
+apt-get install -y mesa-vulkan-drivers vulkan-tools xvfb
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    xvfb-run godot --path . --script res://tests/screenshot.gd
+```
+
+**Software Vulkan does not rasterise directional shadows.** This was confirmed
+with a minimal scene — a single box on a plane under a shadow-casting
+directional light produces no shadow at all. Everything else checked out:
+sky, AgX tonemapping, glow, depth fog and SSAO all render correctly, SSAO
+verified by toggling it and seeing contact darkening appear.
+
+So the committed screenshot **understates** the real look, and shadow settings
+— cascade splits, bias, blur, sun angle — are the one part of the lighting that
+has never been seen. They need a pass on real hardware.
+
 ## Adding an asset
 
 1. Confirm the licence is CC0 and note it in the table above.

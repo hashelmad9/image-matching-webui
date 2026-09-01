@@ -76,6 +76,36 @@ gives a stable result with less machinery.
 A lobby camera in the root viewport shows the empty arena until the first
 player joins, so launching the game never presents a black screen.
 
+## Lighting
+
+Everything lives on the `WorldEnvironment` and the two lights in
+`scenes/arena.tscn`. The governing constraint is that **split screen draws the
+scene once per player**, so every effect costs up to four times its
+single-viewport price. That rules out SDFGI, screen-space reflections and
+volumetric fog regardless of how good they look; what is here is chosen to be
+cheap.
+
+- **Sky-based ambient.** A `ProceduralSkyMaterial` lights the scene via
+  `AMBIENT_SOURCE_SKY`, which gives directional, coloured fill instead of the
+  flat grey wash a constant ambient colour produces. It also fills the space
+  above the walls, which used to read as flat black.
+- **Warm key, cool fill.** One shadow-casting `DirectionalLight3D` at a low
+  angle for long, readable shadows, plus a dimmer blue fill from behind at
+  `shadow_enabled = false`. Directional lights are cheap; the second one costs
+  almost nothing and does most of the work of making shapes read.
+- **AgX tonemapping** at exposure 2.4. Filmic rolloff rather than linear
+  clipping. The exposure is high because sky ambient is dimmer than the flat
+  ambient it replaced.
+- **Glow** for tracers. This is why `Projectile` uses an emissive material with
+  `emission_energy_multiplier = 6.0` rather than a flat unshaded colour: glow
+  keys off HDR values above `glow_hdr_threshold`, and a plain albedo colour
+  caps at 1.0 and would never bloom.
+- **SSAO** for contact grounding, and **depth fog** (not volumetric) for
+  distance falloff.
+
+Both SSAO and glow are per-viewport costs and are the first things to measure
+on real hardware — see the framerate item in the roadmap.
+
 ## Collision
 
 Godot's physics does the work. Players are `CharacterBody3D` and move with

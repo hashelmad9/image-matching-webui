@@ -61,6 +61,10 @@ milestone is deliberately first among the remaining work.
 - [ ] Tune speed, turn rate, camera distance and fire rate against that feedback
 - [ ] Confirm four-way split holds a stable framerate on the target machine —
       measure before optimising, and record the number
+- [ ] **Look at the shadows.** They have never been seen: software Vulkan does
+      not draw them, so cascade splits, bias, blur and sun angle are all set
+      blind. Expect to adjust them.
+- [ ] Decide whether SSAO and glow survive the four-viewport budget
 
 ---
 
@@ -82,18 +86,25 @@ is worth more than any amount of extra art.
 
 ## M5 — Environment and lighting
 
-Where the arena stops looking like grey boxes.
+Where the arena stops looking like grey boxes. The lighting half is done; the
+material half is not.
 
+- [x] Sky-based ambient replacing the flat colour wash, which also fills the
+      dead black space above the walls
+- [x] Warm key light with shadow cascades, plus a cool unshadowed fill
+- [x] AgX tonemapping
+- [x] Glow, with emissive tracers bright enough to actually bloom
+- [x] SSAO and depth fog
+- [ ] **Verify the shadows on real hardware** — see M3; they are set blind
 - [ ] Commit to one art direction in writing, then judge every asset against it
 - [ ] Replace box cover with modelled props ([Kenney Prototype Kit](https://kenney.nl/assets/prototype-kit),
       [Quaternius Sci-Fi Essentials](https://quaternius.com/packs/scifiessentialskit.html))
 - [ ] PBR floor and wall materials from [ambientCG](https://ambientcg.com/) or
-      [Poly Haven](https://polyhaven.com/textures)
-- [ ] An HDRI sky so the void above the walls stops being flat black
-- [ ] **Bake lighting** with LightmapGI — static arena, four cameras, so baked
-      light is both cheaper and better than realtime here
-- [ ] Cheap post-processing only: tonemapping (AgX or ACES), mild glow for
-      tracers, SSAO if it survives the four-viewport budget
+      [Poly Haven](https://polyhaven.com/textures) — the floor is a large flat
+      expanse and is now the weakest thing on screen
+- [ ] Consider an HDRI sky in place of the procedural one
+- [ ] **Bake lighting** with LightmapGI — the arena is static and drawn four
+      times, so baked light is both cheaper and better than realtime here
 - [ ] Re-measure framerate after each addition, not at the end
 
 ---

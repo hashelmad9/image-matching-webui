@@ -59,8 +59,8 @@ plus a `.pck` data file.
 godot --headless --path . --script res://tests/run_tests.gd
 
 # Re-render docs/split-screen.png from a live four-player match.
-xvfb-run godot --path . --rendering-driver opengl3 \
-    --rendering-method gl_compatibility --script res://tests/screenshot.gd
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    xvfb-run godot --path . --script res://tests/screenshot.gd
 ```
 
 The screenshot script is how this project checks that rendering actually works

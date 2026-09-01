@@ -1,8 +1,12 @@
 ## Renders a frame of a four-player match to a PNG, so the split-screen layout
 ## can be inspected without a physical machine.
 ##
-##     xvfb-run godot --path . --rendering-driver opengl3 \
-##         --rendering-method gl_compatibility --script res://tests/screenshot.gd
+##     VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+##         xvfb-run godot --path . --script res://tests/screenshot.gd
+##
+## Renders through Forward+, which is what the game ships with. Note that
+## software Vulkan does not rasterise directional shadows, so the output
+## understates the real look — see docs/ASSETS.md.
 extends SceneTree
 
 

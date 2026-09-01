@@ -1,11 +1,44 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_arena"]
+sky_top_color = Color(0.16, 0.22, 0.45, 1)
+sky_horizon_color = Color(0.62, 0.54, 0.58, 1)
+sky_curve = 0.18
+ground_horizon_color = Color(0.34, 0.30, 0.32, 1)
+ground_bottom_color = Color(0.07, 0.07, 0.10, 1)
+ground_curve = 0.12
+sun_angle_max = 30.0
+sun_curve = 0.12
+
+[sub_resource type="Sky" id="Sky_arena"]
+sky_material = SubResource("SkyMaterial_arena")
 
 [sub_resource type="Environment" id="Environment_arena"]
-background_mode = 1
-background_color = Color(0.05, 0.06, 0.09, 1)
-ambient_light_source = 2
-ambient_light_color = Color(0.7, 0.78, 1, 1)
-ambient_light_energy = 0.75
+background_mode = 2
+sky = SubResource("Sky_arena")
+ambient_light_source = 3
+ambient_light_sky_contribution = 1.0
+ambient_light_energy = 1.1
+tonemap_mode = 4
+tonemap_exposure = 2.4
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 2.5
+ssao_power = 1.5
+ssao_detail = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_strength = 1.0
+glow_bloom = 0.05
+glow_blend_mode = 1
+glow_hdr_threshold = 1.0
+fog_enabled = true
+fog_mode = 0
+fog_light_color = Color(0.26, 0.29, 0.42, 1)
+fog_light_energy = 1.0
+fog_density = 0.006
+fog_sky_affect = 0.0
+fog_aerial_perspective = 0.2
 
 [sub_resource type="StandardMaterial3D" id="Material_floor"]
 albedo_color = Color(0.29, 0.31, 0.36, 1)
@@ -67,9 +100,27 @@ size = Vector3(7.0, 2.4, 2.4)
 environment = SubResource("Environment_arena")
 
 [node name="KeyLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.819152, 0.0, -0.573576, -0.439385, 0.642788, -0.627507, 0.368688, 0.766044, 0.526541, 0.0, 20.0, 0.0)
+transform = Transform3D(0.788011, 0.0, -0.615661, -0.344274, 0.829038, -0.44065, 0.510406, 0.559193, 0.653291, 0.0, 20.0, 0.0)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 3.4
+light_angular_distance = 1.2
 shadow_enabled = true
-light_energy = 2.2
+shadow_bias = 0.04
+shadow_normal_bias = 0.6
+shadow_blur = 0.8
+directional_shadow_mode = 2
+directional_shadow_split_1 = 0.06
+directional_shadow_split_2 = 0.18
+directional_shadow_split_3 = 0.45
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 70.0
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.819152, 0.0, 0.573576, 0.242404, 0.906308, 0.346189, -0.519837, 0.422618, -0.742404, 0.0, 20.0, 0.0)
+light_color = Color(0.48, 0.62, 1, 1)
+light_energy = 0.8
+light_specular = 0.2
+shadow_enabled = false
 
 [node name="Floor" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, -0.25, 0.0)
