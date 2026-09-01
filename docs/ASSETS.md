@@ -25,6 +25,16 @@ threaded through a dozen scenes.
 Four skins ship with that pack, which is exactly `MAX_PLAYERS`, so each seat
 reads as a different person. See `Config.PLAYER_SKINS`.
 
+| Asset | Source | Licence | Used for |
+| --- | --- | --- | --- |
+| `assets/materials/MetalPlates008/` | [ambientCG](https://ambientcg.com/view?id=MetalPlates008) | CC0 | Floor |
+| `assets/materials/MetalPlates006/` | [ambientCG](https://ambientcg.com/view?id=MetalPlates006) | CC0 | Cover blocks |
+| `assets/materials/Concrete034/` | [ambientCG](https://ambientcg.com/view?id=Concrete034) | CC0 | Boundary walls |
+
+The 1K-JPG variants, keeping only Color, NormalGL, Roughness and Metalness.
+Displacement is deliberately dropped: parallax is a per-pixel cost, and split
+screen pays it four times.
+
 ## Verified sources
 
 All confirmed CC0 and reachable without an account.
@@ -87,6 +97,28 @@ and comparing; `tests/screenshot.gd` is the pattern to copy.
 **The importer already applies axis correction.** Kenney's FBX files are
 authored Z-up, but Godot lands them upright and Y-up. Adding a −90° X rotation
 to "fix" it lays the character flat on its back.
+
+**Materials use world-space triplanar mapping.** Godot's `BoxMesh` lays its
+six faces out across the UV square, so a tiling texture on a 48-metre floor
+box would smear. `uv1_triplanar` with `uv1_world_triplanar` projects the
+texture in world space instead: no UV authoring, and the same tile size on
+every box whatever its dimensions. `uv1_scale` is the reciprocal of the tile
+size in metres.
+
+**A fill light must have zero specular.** The first textured render had a
+blinding white streak across the floor in one player's view and nowhere
+else. It was not bloom, not metalness and not the sky's sun disc — each was
+ruled out in turn, and the streak did not change. Rendering with each light
+disabled showed it came from the cool fill light: at a low angle, even
+`light_specular = 0.2` produces a huge grazing highlight on a glossy floor for
+whichever camera happens to sit at the mirror angle. A fill exists to soften
+shadows, so its specular is now 0. (The key light also has
+`sky_mode = SKY_MODE_LIGHT_ONLY`, kept from the sun-disc theory: it is
+harmless and stops the sky ever painting a disc for the floor to reflect.)
+
+**ambientCG's zips include a `.tres`.** It is a usable Godot material as-is,
+but it enables the heightmap and uses plain UVs, so this project writes its
+own material and only borrows the texture-channel settings from it.
 
 **Animations arrive as separate FBX scenes.** Each clip file contains its own
 `AnimationPlayer` and a duplicate skeleton. `Player._setup_animations()` lifts

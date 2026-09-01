@@ -140,7 +140,7 @@ func _die(killer: Player) -> void:
 	_respawn_countdown = Config.RESPAWN_SECONDS
 	visible = false
 	# Stop colliding while down, so corpses do not block the arena.
-	set_collision_layer_value(Config.LAYER_PLAYERS, false)
+	collision_layer = 0
 	velocity = Vector3.ZERO
 	died.emit(self, killer)
 
@@ -149,7 +149,7 @@ func _respawn() -> void:
 	is_dead = false
 	health = Config.PLAYER_MAX_HEALTH
 	visible = true
-	set_collision_layer_value(Config.LAYER_PLAYERS, true)
+	collision_layer = Config.LAYER_PLAYERS
 	_move_to_spawn()
 
 

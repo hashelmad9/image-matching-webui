@@ -103,6 +103,11 @@ cheap.
 - **SSAO** for contact grounding, and **depth fog** (not volumetric) for
   distance falloff.
 
+Surfaces are PBR sets from ambientCG applied with world-space triplanar
+mapping (see `docs/ASSETS.md` for why). The floor is only partly metallic:
+a fully metallic surface has no diffuse term and turns into a dark mirror of
+whatever sky is above it.
+
 Both SSAO and glow are per-viewport costs and are the first things to measure
 on real hardware — see the framerate item in the roadmap.
 

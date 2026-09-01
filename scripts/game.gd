@@ -101,4 +101,9 @@ func _on_joy_connection_changed(device: int, connected: bool) -> void:
 ## The lobby prompt covers the window until somebody joins; after that the
 ## split-screen viewports do.
 func _refresh_lobby() -> void:
-	_lobby_ui.visible = _split_screen.view_count() == 0
+	var in_lobby := _split_screen.view_count() == 0
+	_lobby_ui.visible = in_lobby
+	_lobby_camera.current = in_lobby
+	# Once the split views cover the window, the root viewport would still be
+	# drawing the entire arena behind them: a fifth full render nobody sees.
+	get_viewport().disable_3d = not in_lobby

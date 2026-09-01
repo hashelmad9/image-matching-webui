@@ -1,0 +1,6 @@
+Materials in this directory are from ambientCG (https://ambientcg.com),
+released under the Creative Commons CC0 1.0 Universal licence:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Downloaded as the 1K-JPG variants. Only the Color, NormalGL, Roughness and
+Metalness maps are kept; displacement is intentionally not used.

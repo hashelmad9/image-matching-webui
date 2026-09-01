@@ -99,9 +99,8 @@ material half is not.
 - [ ] Commit to one art direction in writing, then judge every asset against it
 - [ ] Replace box cover with modelled props ([Kenney Prototype Kit](https://kenney.nl/assets/prototype-kit),
       [Quaternius Sci-Fi Essentials](https://quaternius.com/packs/scifiessentialskit.html))
-- [ ] PBR floor and wall materials from [ambientCG](https://ambientcg.com/) or
-      [Poly Haven](https://polyhaven.com/textures) — the floor is a large flat
-      expanse and is now the weakest thing on screen
+- [x] PBR floor, wall and cover materials from [ambientCG](https://ambientcg.com/),
+      triplanar-mapped so nothing needed UVs
 - [ ] Consider an HDRI sky in place of the procedural one
 - [ ] **Bake lighting** with LightmapGI — the arena is static and drawn four
       times, so baked light is both cheaper and better than realtime here

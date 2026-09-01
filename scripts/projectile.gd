@@ -12,6 +12,10 @@ var damage := Config.PROJECTILE_DAMAGE
 
 @onready var _mesh: MeshInstance3D = $Mesh
 
+## One material per tint, shared by every tracer of that colour. Four players
+## firing six shots a second would otherwise allocate a material per shot.
+static var _materials: Dictionary = {}
+
 var _tint := Color.WHITE
 var _remaining_life := Config.PROJECTILE_LIFETIME
 ## Guards against a second hit being processed in the same frame as the first,
@@ -36,14 +40,21 @@ func tint(colour: Color) -> void:
 
 
 func _apply_tint() -> void:
+	_mesh.material_override = _material_for(_tint)
+
+
+static func _material_for(colour: Color) -> StandardMaterial3D:
+	if _materials.has(colour):
+		return _materials[colour]
 	var material := StandardMaterial3D.new()
 	# Emission above 1.0 is what pushes the tracer past the environment's glow
 	# threshold; a plain albedo colour caps at 1.0 and would never bloom.
-	material.albedo_color = _tint.darkened(0.6)
+	material.albedo_color = colour.darkened(0.6)
 	material.emission_enabled = true
-	material.emission = _tint
+	material.emission = colour
 	material.emission_energy_multiplier = 6.0
-	_mesh.material_override = material
+	_materials[colour] = material
+	return material
 
 
 func _physics_process(delta: float) -> void:

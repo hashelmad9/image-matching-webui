@@ -50,6 +50,10 @@ godot --headless --dump-extension-api   # writes extension_api.json
 
 Grep that for real class names, method signatures and enum values.
 
+**`.tscn` files do not support `#` comments.** The parser stops reading a
+node's properties at the first `#` line and silently keeps defaults for the
+rest. Explanations go in `docs/`, not the scene file.
+
 **Tuning values live in `scripts/config.gd`.** Balance and feel changes belong
 there, not scattered through behaviour scripts.
 
