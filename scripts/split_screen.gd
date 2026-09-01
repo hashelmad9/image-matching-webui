@@ -54,6 +54,7 @@ func add_view(player: Player) -> void:
 	view.container.add_child(view.viewport)
 
 	view.camera = Camera3D.new()
+	view.camera.fov = Config.CAMERA_FOV
 	view.camera.current = true
 	view.viewport.add_child(view.camera)
 	_place_camera(view, 1.0)

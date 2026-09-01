@@ -12,7 +12,14 @@ signal died(victim: Player, killer: Player)
 ## player does not need to know where projectiles live in the scene tree.
 signal fired(shooter: Player, origin: Vector3, direction: Vector3)
 
-@onready var _mesh: MeshInstance3D = $Mesh
+## Kenney ships each clip as its own FBX, so they are lifted out and re-hosted
+## on a single AnimationPlayer built against our skeleton.
+const ANIMATION_SOURCES := {
+	"idle": ["res://assets/characters/animations/idle.fbx", "Root|Idle"],
+	"run": ["res://assets/characters/animations/run.fbx", "Root|Run"],
+}
+
+@onready var _character: Node3D = $Character
 
 ## Stable identity. Picks the colour and spawn point, and survives other
 ## players leaving. This is NOT the split-screen slot.
@@ -27,13 +34,16 @@ var is_dead := false
 
 var _fire_cooldown := 0.0
 var _respawn_countdown := 0.0
+var _animation_player: AnimationPlayer = null
+var _current_animation := ""
 
 
 func _ready() -> void:
 	collision_layer = Config.LAYER_PLAYERS
 	# Collide with the arena and with other players.
 	collision_mask = Config.LAYER_WORLD | Config.LAYER_PLAYERS
-	_apply_colour()
+	_apply_skin()
+	_setup_animations()
 	_move_to_spawn()
 
 
@@ -57,6 +67,7 @@ func _physics_process(delta: float) -> void:
 	_update_facing(input, delta)
 	_update_movement(input, delta)
 	_update_firing(input)
+	_update_animation(input)
 
 
 func _update_facing(input: PlayerInput, delta: float) -> void:
@@ -151,8 +162,67 @@ func _move_to_spawn() -> void:
 	velocity = Vector3.ZERO
 
 
-func _apply_colour() -> void:
+func _update_animation(input: PlayerInput) -> void:
+	if _animation_player == null:
+		return
+	var wanted := "run" if input.move_axis != Vector2.ZERO else "idle"
+	if wanted == _current_animation or not _animation_player.has_animation(wanted):
+		return
+	_current_animation = wanted
+	_animation_player.play(wanted)
+
+
+func _apply_skin() -> void:
+	var mesh := _find_mesh(_character)
+	if mesh == null:
+		push_warning("player %d: no mesh found under Character" % index)
+		return
+	var texture := load(Config.player_skin(index)) as Texture2D
+	if texture == null:
+		return
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Config.player_color(index)
-	material.roughness = 0.6
-	_mesh.material_override = material
+	material.albedo_texture = texture
+	material.roughness = 0.8
+	mesh.material_override = material
+
+
+func _setup_animations() -> void:
+	var library := AnimationLibrary.new()
+	for name: String in ANIMATION_SOURCES:
+		var source: Array = ANIMATION_SOURCES[name]
+		var clip := _load_animation(source[0], source[1])
+		if clip != null:
+			library.add_animation(name, clip)
+	if library.get_animation_list().is_empty():
+		push_warning("player %d: no animations loaded" % index)
+		return
+
+	_animation_player = AnimationPlayer.new()
+	# Parenting to Character means the clips' "Root/Skeleton3D:bone" track
+	# paths resolve against our own skeleton without rewriting them.
+	_character.add_child(_animation_player)
+	_animation_player.add_animation_library("", library)
+
+
+func _load_animation(path: String, clip_name: String) -> Animation:
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return null
+	var scene: Node = packed.instantiate()
+	var source := scene.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	var clip: Animation = null
+	if source != null and source.has_animation(clip_name):
+		clip = source.get_animation(clip_name).duplicate()
+		clip.loop_mode = Animation.LOOP_LINEAR
+	scene.free()
+	return clip
+
+
+func _find_mesh(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child in node.get_children():
+		var found := _find_mesh(child)
+		if found != null:
+			return found
+	return null

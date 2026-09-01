@@ -12,11 +12,16 @@ no menu to navigate — plug in a pad, press A, you are in the match.
 ## Status
 
 Early, but the core loop works end to end: join, move, aim, shoot, kill,
-respawn, score. The screenshot above is a real frame rendered from the project.
+respawn, score — now with rigged, animated characters rather than capsules,
+one skin per player. The screenshot above is a real frame rendered from the
+project, not a mockup.
 
 It has **not** been played on real hardware with real controllers. Movement
-feel, camera comfort and controller compatibility are all unverified. See
-[docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
+feel, camera comfort and controller compatibility are all unverified, and that
+is the next job. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+All art is CC0 — see [docs/ASSETS.md](docs/ASSETS.md) for sources and the
+import pipeline.
 
 ## Controls
 
@@ -63,8 +68,9 @@ without a physical machine in the loop; on Windows or macOS, drop `xvfb-run`
 and the renderer flags.
 
 Further reading: [docs/DESIGN.md](docs/DESIGN.md) for how the code fits
-together, [CLAUDE.md](CLAUDE.md) for the constraints worth knowing before
-editing.
+together, [docs/ASSETS.md](docs/ASSETS.md) for art sources and import traps,
+[docs/ROADMAP.md](docs/ROADMAP.md) for the plan, and [CLAUDE.md](CLAUDE.md) for
+the constraints worth knowing before editing.
 
 ## Licence
 

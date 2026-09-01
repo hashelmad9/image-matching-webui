@@ -41,18 +41,35 @@ const MUZZLE_FORWARD := 1.0
 const MUZZLE_HEIGHT := 1.0
 
 # --- camera ---------------------------------------------------------------
-const CAMERA_DISTANCE := 8.5
-const CAMERA_HEIGHT := 9.5
+const CAMERA_DISTANCE := 7.5
+const CAMERA_HEIGHT := 9.0
 ## How far ahead of the player the camera aims, in metres.
 const CAMERA_LOOK_AHEAD := 3.0
 ## Higher snaps the camera to the player faster. Units: 1/seconds.
 const CAMERA_FOLLOW_RATE := 9.0
+## Narrower than Godot's 75 default: it magnifies the character without
+## flattening the camera angle, which would fill the frame with empty sky.
+const CAMERA_FOV := 60.0
 
 # --- physics layers -------------------------------------------------------
 ## Bit 1 in the inspector. Static arena geometry.
 const LAYER_WORLD := 1
 ## Bit 2 in the inspector. Player bodies.
 const LAYER_PLAYERS := 2
+
+
+## Texture atlas per seat. Kenney's character pack ships four skins, which is
+## exactly MAX_PLAYERS, so each player reads as a different person on screen.
+const PLAYER_SKINS: Array[String] = [
+	"res://assets/characters/survivorMaleB.png",
+	"res://assets/characters/survivorFemaleA.png",
+	"res://assets/characters/zombieA.png",
+	"res://assets/characters/zombieC.png",
+]
+
+
+static func player_skin(index: int) -> String:
+	return PLAYER_SKINS[index % MAX_PLAYERS]
 
 
 ## Stable per-player identity colour, shared by the capsule, its projectiles

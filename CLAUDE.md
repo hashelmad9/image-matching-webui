@@ -65,6 +65,11 @@ renders black, check `world_3d` first.
 use `move_and_slide()`; the arena is `StaticBody3D`. Do not hand-roll collision
 resolution — an earlier version of this game did, and it was strictly worse.
 
+**Only CC0 art enters this repository,** and every asset is recorded in
+`docs/ASSETS.md`. That file also documents the import traps — chiefly that
+`get_aabb()` and bone rests both report the wrong size for a rigged model, so
+scale must be calibrated against a rendered reference, never a measurement.
+
 **A projectile must only be consumed once.** `Projectile` guards this with the
 `_consumed` flag, because `body_entered` can fire more than once before
 `queue_free()` takes effect.
