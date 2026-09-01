@@ -1,0 +1,12 @@
+# Rust build output
+/target/
+
+# Bevy/wgpu shader cache
+/.cache/
+
+# Editor and OS noise
+/.idea/
+/.vscode/
+*.swp
+.DS_Store
+Thumbs.db
