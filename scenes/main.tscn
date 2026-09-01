@@ -1,0 +1,52 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="PackedScene" path="res://scenes/arena.tscn" id="2_arena"]
+[ext_resource type="Script" path="res://scripts/split_screen.gd" id="3_split"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_game")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="Arena" parent="World" instance=ExtResource("2_arena")]
+
+[node name="Players" type="Node3D" parent="World"]
+
+[node name="LobbyCamera" type="Camera3D" parent="World"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 26, 34)
+
+[node name="Screens" type="CanvasLayer" parent="."]
+
+[node name="SplitScreen" type="Control" parent="Screens"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_split")
+
+[node name="LobbyUI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="VBoxContainer" parent="LobbyUI"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="LobbyUI/Panel"]
+text = "COUCH ARENA"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 56
+
+[node name="JoinPrompt" type="Label" parent="LobbyUI/Panel"]
+text = "Press A or START on a controller to join"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+
+[node name="KeyboardPrompt" type="Label" parent="LobbyUI/Panel"]
+text = "No controller? Press ENTER to play on keyboard"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18

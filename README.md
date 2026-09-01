@@ -1,214 +1,71 @@
-<!-- [![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url] -->
+# Couch Arena
 
-<p align="center">
-  <h1 align="center"><br><ins>Image Matching WebUI</ins>
-  <br>Matching Keypoints between two images</h1>
-</p>
-<div align="center">
-  <a target="_blank" href="https://github.com/Vincentqyw/image-matching-webui/actions/workflows/release.yml"><img src="https://github.com/Vincentqyw/image-matching-webui/actions/workflows/release.yml/badge.svg" alt="PyPI Release"></a>
-  <a target="_blank" href='https://huggingface.co/spaces/Realcat/image-matching-webui'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'></a>
-  <a target="_blank" href="https://pypi.org/project/imcui"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/imcui?style=flat&logo=pypi&label=imcui&link=https%3A%2F%2Fpypi.org%2Fproject%2Fimcui"></a>
-  <a target="_blank" href="https://hub.docker.com/r/vincentqin/image-matching-webui"><img alt="Docker Image Version" src="https://img.shields.io/docker/v/vincentqin/image-matching-webui?sort=date&arch=amd64&logo=docker&label=imcui&link=https%3A%2F%2Fhub.docker.com%2Fr%2Fvincentqin%2Fimage-matching-webui"></a>
-  <a target="_blank" href="https://pepy.tech/projects/imcui"><img src="https://static.pepy.tech/badge/imcui" alt="PyPI Downloads"></a>
-  <a target="_blank" href="https://deepwiki.com/Vincentqyw/image-matching-webui"><img src="https://img.shields.io/badge/DeepWiki-imcui-blue.svg" alt="DeepWiki"></a>
-</div>
+A 3D split-screen arena shooter for Windows, for two to four people on one
+couch and one screen. Built with [Godot 4.7](https://godotengine.org).
 
-## Description
+Players join by pressing a button on any connected controller, and the screen
+re-partitions itself as they come and go. There is no lobby to back out to and
+no menu to navigate — plug in a pad, press A, you are in the match.
 
-`Image Matching WebUI (IMCUI)` efficiently matches image pairs using multiple famous image matching algorithms. The tool features a Graphical User Interface (GUI) designed using [gradio](https://gradio.app/). You can effortlessly select two images and a matching algorithm and obtain a precise matching result.
-**Note**: the images source can be either local images or webcam images.
+![Four-player split screen](docs/split-screen.png)
 
-Try it on
-<a href='https://huggingface.co/spaces/Realcat/image-matching-webui'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'></a>
-<a target="_blank" href="https://lightning.ai/realcat/studios/image-matching-webui"><img src="https://pl-bolts-doc-images.s3.us-east-2.amazonaws.com/app-2/studio-badge.svg" alt="Open In Studio"/></a>
+## Status
 
-Here is a demo of the tool:
+Early, but the core loop works end to end: join, move, aim, shoot, kill,
+respawn, score. The screenshot above is a real frame rendered from the project.
 
-https://github.com/Vincentqyw/image-matching-webui/assets/18531182/263534692-c3484d1b-cc00-4fdc-9b31-e5b7af07ecd9
+It has **not** been played on real hardware with real controllers. Movement
+feel, camera comfort and controller compatibility are all unverified. See
+[docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
 
-The tool currently supports various popular image matching algorithms, namely:
+## Controls
 
-| Algorithm        | Supported | Conference/Journal | Year | GitHub Link |
-|------------------|-----------|--------------------|------|-------------|
-| DaD            | ✅ | ARXIV   | 2025 | [Link](https://github.com/Parskatt/dad) |
-| LiftFeat       | ✅ | ICRA    | 2025 | [Link](https://github.com/lyp-deeplearning/LiftFeat) |
-| MINIMA         | ✅ | ARXIV   | 2024 | [Link](https://github.com/LSXI7/MINIMA) |
-| XoFTR          | ✅ | CVPR    | 2024 | [Link](https://github.com/OnderT/XoFTR) |
-| EfficientLoFTR | ✅ | CVPR    | 2024 | [Link](https://github.com/zju3dv/EfficientLoFTR) |
-| MASt3R         | ✅ | CVPR    | 2024 | [Link](https://github.com/naver/mast3r) |
-| DUSt3R         | ✅ | CVPR    | 2024 | [Link](https://github.com/naver/dust3r) |
-| OmniGlue       | ✅ | CVPR    | 2024 | [Link](https://github.com/Vincentqyw/omniglue-onnx) |
-| XFeat          | ✅ | CVPR    | 2024 | [Link](https://github.com/verlab/accelerated_features) |
-| RoMa           | ✅ | CVPR    | 2024 | [Link](https://github.com/Vincentqyw/RoMa) |
-| DeDoDe         | ✅ | 3DV     | 2024 | [Link](https://github.com/Parskatt/DeDoDe) |
-| Mickey         | ❌ | CVPR    | 2024 | [Link](https://github.com/nianticlabs/mickey) |
-| GIM            | ✅ | ICLR    | 2024 | [Link](https://github.com/xuelunshen/gim) |
-| ALIKED         | ✅ | ICCV    | 2023 | [Link](https://github.com/Shiaoming/ALIKED) |
-| LightGlue      | ✅ | ICCV    | 2023 | [Link](https://github.com/cvg/LightGlue) |
-| DarkFeat       | ✅ | AAAI    | 2023 | [Link](https://github.com/THU-LYJ-Lab/DarkFeat) |
-| SFD2           | ✅ | CVPR    | 2023 | [Link](https://github.com/feixue94/sfd2) |
-| IMP            | ✅ | CVPR    | 2023 | [Link](https://github.com/feixue94/imp-release) |
-| ASTR           | ❌ | CVPR    | 2023 | [Link](https://github.com/ASTR2023/ASTR) |
-| SEM            | ❌ | CVPR    | 2023 | [Link](https://github.com/SEM2023/SEM) |
-| DeepLSD        | ❌ | CVPR    | 2023 | [Link](https://github.com/cvg/DeepLSD) |
-| GlueStick      | ✅ | ICCV    | 2023 | [Link](https://github.com/cvg/GlueStick) |
-| ConvMatch      | ❌ | AAAI    | 2023 | [Link](https://github.com/SuhZhang/ConvMatch) |
-| LoFTR          | ✅ | CVPR    | 2021 | [Link](https://github.com/zju3dv/LoFTR) |
-| SOLD2          | ✅ | CVPR    | 2021 | [Link](https://github.com/cvg/SOLD2) |
-| LineTR         | ❌ | RA-L    | 2021 | [Link](https://github.com/yosungho/LineTR) |
-| DKM            | ✅ | CVPR    | 2023 | [Link](https://github.com/Parskatt/DKM) |
-| NCMNet         | ❌ | CVPR    | 2023 | [Link](https://github.com/xinliu29/NCMNet) |
-| TopicFM        | ✅ | AAAI    | 2023 | [Link](https://github.com/Vincentqyw/TopicFM) |
-| AspanFormer    | ✅ | ECCV    | 2022 | [Link](https://github.com/Vincentqyw/ml-aspanformer) |
-| LANet          | ✅ | ACCV    | 2022 | [Link](https://github.com/wangch-g/lanet) |
-| LISRD          | ❌ | ECCV    | 2022 | [Link](https://github.com/rpautrat/LISRD) |
-| REKD           | ❌ | CVPR    | 2022 | [Link](https://github.com/bluedream1121/REKD) |
-| CoTR           | ✅ | ICCV    | 2021 | [Link](https://github.com/ubc-vision/COTR) |
-| ALIKE          | ✅ | TMM     | 2022 | [Link](https://github.com/Shiaoming/ALIKE) |
-| RoRD           | ✅ | IROS    | 2021 | [Link](https://github.com/UditSinghParihar/RoRD) |
-| SGMNet         | ✅ | ICCV    | 2021 | [Link](https://github.com/vdvchen/SGMNet) |
-| SuperPoint     | ✅ | CVPRW   | 2018 | [Link](https://github.com/magicleap/SuperPointPretrainedNetwork) |
-| SuperGlue      | ✅ | CVPR    | 2020 | [Link](https://github.com/magicleap/SuperGluePretrainedNetwork) |
-| D2Net          | ✅ | CVPR    | 2019 | [Link](https://github.com/Vincentqyw/d2-net) |
-| R2D2           | ✅ | NeurIPS | 2019 | [Link](https://github.com/naver/r2d2) |
-| DISK           | ✅ | NeurIPS | 2020 | [Link](https://github.com/cvlab-epfl/disk) |
-| Key.Net        | ❌ | ICCV    | 2019 | [Link](https://github.com/axelBarroso/Key.Net) |
-| OANet          | ❌ | ICCV    | 2019 | [Link](https://github.com/zjhthu/OANet) |
-| SOSNet         | ✅ | CVPR    | 2019 | [Link](https://github.com/scape-research/SOSNet) |
-| HardNet        | ✅ | NeurIPS | 2017 | [Link](https://github.com/DagnyT/hardnet) |
-| SIFT           | ✅ | IJCV    | 2004 | [Link](https://docs.opencv.org/4.x/da/df5/tutorial_py_sift_intro.html) |
+| Action | Gamepad | Keyboard |
+| --- | --- | --- |
+| Join | `A` or `Start` | `Enter` |
+| Move | Left stick | `W` `A` `S` `D` |
+| Aim | Right stick | Arrow keys |
+| Fire | Right trigger, `RB`, or `A` | `Space` |
 
+Up to four gamepads are supported, plus one keyboard seat. The keyboard seat
+exists so the game can be launched and checked without controllers attached;
+it is not meant as a way to play seriously.
 
-## How to use
+## Running it
 
-### HuggingFace / Lightning AI
-
-Just try it on <a href='https://huggingface.co/spaces/Realcat/image-matching-webui'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'></a>
-<a target="_blank" href="https://lightning.ai/realcat/studios/image-matching-webui">
-  <img src="https://pl-bolts-doc-images.s3.us-east-2.amazonaws.com/app-2/studio-badge.svg" alt="Open In Studio"/>
-</a>
-
-or deploy it locally following the instructions below.
-
-### Requirements
-
-- [Python 3.9+](https://www.python.org/downloads/)
-
-#### Install from pip [NEW]
-
-Update: now support install from [pip](https://pypi.org/project/imcui), just run:
+Install [Godot 4.7](https://godotengine.org/download) — a single executable,
+no installer and no SDK. Then either open `project.godot` in the editor and
+press F5, or from the command line:
 
 ```bash
-pip install imcui
+godot --path .
 ```
 
-#### Install from source
+## Exporting for Windows
 
-``` bash
-git clone --recursive https://github.com/Vincentqyw/image-matching-webui.git
-cd image-matching-webui
-conda env create -f environment.yaml
-conda activate imcui
-pip install -e .
-```
+In the editor: **Project → Export**, add a Windows Desktop preset, install the
+export templates when prompted, and export. The result is a standalone `.exe`
+plus a `.pck` data file.
 
-or using [docker](https://hub.docker.com/r/vincentqin/image-matching-webui):
-
-``` bash
-docker pull vincentqin/image-matching-webui:latest
-docker run -it -d \
-  -p 7860:7860 \
-  -p 8000:8000 \
-  -p 8001:8001 \
-  -p 8265:8265 \
-  --name imc-test \
-  vincentqin/image-matching-webui:latest
-```
-then webui and api server are auto-run.
-
-### Deploy to Railway
-
-Deploy to [Railway](https://railway.app/), setting up a `Custom Start Command` in `Deploy` section:
-
-``` bash
-python -m imcui.api.server
-```
-
-### Run demo
-``` bash
-python app.py --config ./config/config.yaml
-```
-then open http://localhost:7860 in your browser.
-
-![](assets/gui.jpg)
-
-### Add your own feature / matcher
-
-I provide an example to add local feature in [imcui/hloc/extractors/example.py](imcui/hloc/extractors/example.py). Then add feature settings in `confs` in file [imcui/hloc/extract_features.py](imcui/hloc/extract_features.py). Last step is adding some settings to `matcher_zoo` in file [imcui/ui/config.yaml](imcui/ui/config.yaml).
-
-### Upload models
-
-IMCUI hosts all models on [Huggingface](https://huggingface.co/Realcat/imcui_checkpoints).  You can upload your model to Huggingface and add it to the [Realcat/imcui_checkpoints](https://huggingface.co/Realcat/imcui_checkpoints) repository.
-
-
-## Contributions welcome!
-
-External contributions are very much welcome. Please follow the [PEP8 style guidelines](https://www.python.org/dev/peps/pep-0008/) using a linter like flake8. This is a non-exhaustive list of features that might be valuable additions:
-
-- [x] support pip install command
-- [x] add [CPU CI](.github/workflows/ci.yml)
-- [x] add webcam support
-- [x] add [line feature matching](https://github.com/Vincentqyw/LineSegmentsDetection) algorithms
-- [x] example to add a new feature extractor / matcher
-- [x] ransac to filter outliers
-- [ ] add [rotation images](https://github.com/pidahbus/deep-image-orientation-angle-detection) options before matching
-- [ ] support export matches to colmap ([#issue 6](https://github.com/Vincentqyw/image-matching-webui/issues/6))
-- [x] add config file to set default parameters
-- [x] dynamically load models and reduce GPU overload
-
-Adding local features / matchers as submodules is very easy. For example, to add the [GlueStick](https://github.com/cvg/GlueStick):
-
-``` bash
-git submodule add https://github.com/cvg/GlueStick.git imcui/third_party/GlueStick
-```
-
-If remote submodule repositories are updated, don't forget to pull submodules with:
-
-``` bash
-git submodule update --init --recursive  # init and download
-git submodule update --remote  # update
-```
-
-if you only want to update one submodule, use `git submodule update --remote imcui/third_party/GlueStick`.
-
-To format code before committing, run:
+## Development
 
 ```bash
-pre-commit run -a  # Auto-checks and fixes
+# Headless test suite: geometry, input maths, and the join/spawn/score path.
+godot --headless --path . --script res://tests/run_tests.gd
+
+# Re-render docs/split-screen.png from a live four-player match.
+xvfb-run godot --path . --rendering-driver opengl3 \
+    --rendering-method gl_compatibility --script res://tests/screenshot.gd
 ```
 
-## Contributors
+The screenshot script is how this project checks that rendering actually works
+without a physical machine in the loop; on Windows or macOS, drop `xvfb-run`
+and the renderer flags.
 
-<a href="https://github.com/Vincentqyw/image-matching-webui/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Vincentqyw/image-matching-webui" />
-</a>
+Further reading: [docs/DESIGN.md](docs/DESIGN.md) for how the code fits
+together, [CLAUDE.md](CLAUDE.md) for the constraints worth knowing before
+editing.
 
-## Resources
-- [Image Matching: Local Features & Beyond](https://image-matching-workshop.github.io)
-- [Long-term Visual Localization](https://www.visuallocalization.net)
+## Licence
 
-## Acknowledgement
-
-This code is built based on [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization). We express our gratitude to the authors for their valuable source code.
-
-[contributors-shield]: https://img.shields.io/github/contributors/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[contributors-url]: https://github.com/Vincentqyw/image-matching-webui/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[forks-url]: https://github.com/Vincentqyw/image-matching-webui/network/members
-[stars-shield]: https://img.shields.io/github/stars/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[stars-url]: https://github.com/Vincentqyw/image-matching-webui/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[issues-url]: https://github.com/Vincentqyw/image-matching-webui/issues
+Not yet chosen.
