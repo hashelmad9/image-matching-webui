@@ -6,75 +6,76 @@ get wrong and expensive to discover late.
 ## What this project is
 
 A local-multiplayer ("couch co-op") 3D split-screen arena shooter for Windows,
-written in Rust with Bevy. No game editor is involved: every scene, level and
-entity is defined in code under `src/`.
+built with Godot 4.7 and GDScript.
 
-## Build and verify
+## Verify your work
 
-The game targets Windows, but development happens on whatever machine you are
-on. Two verification paths exist and both matter:
+This project can be tested and even *rendered* without a display, so there is
+no excuse for shipping unverified changes:
 
 ```bash
-# Type-check against the shipping target. This is the check that counts.
-cargo check --target x86_64-pc-windows-gnu
+# Headless tests: viewport tiling, orientation maths, join/spawn/score wiring.
+godot --headless --path . --script res://tests/run_tests.gd
 
-# Unit tests for the pure geometry and input maths. Runs natively.
-cargo test
-
-# Lints. The project is warning-clean; keep it that way.
-cargo clippy --target x86_64-pc-windows-gnu
+# Renders a real four-player frame to docs/split-screen.png. Look at it.
+xvfb-run godot --path . --rendering-driver opengl3 \
+    --rendering-method gl_compatibility --script res://tests/screenshot.gd
 ```
 
-On Linux, `cargo test` needs system libraries that Bevy links against:
+Both must pass before committing. If you touch anything visual — lighting,
+camera framing, arena layout, HUD — re-render and actually open the image. The
+first version of this arena was too dark to play, and only looking at the
+render caught it.
+
+On Linux, rendering needs `xvfb` and Mesa:
 
 ```bash
-apt-get install -y libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev pkg-config
-```
-
-To produce a Windows executable, build on Windows with the MSVC toolchain:
-
-```bash
-cargo build --release          # target/release/couch_arena.exe
+apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0
 ```
 
 ## Rules of the road
 
-**Bevy's API changes between minor versions.** This project is pinned to Bevy
-0.19. Do not write Bevy code from memory — the crate source is the reference,
-and it ships its own examples:
+**Do not write Godot API calls from memory.** This project targets Godot 4.7,
+and the API moves between versions. The authoritative reference for the exact
+build is the engine itself:
 
+```bash
+godot --headless --dump-extension-api   # writes extension_api.json
 ```
-~/.cargo/registry/src/*/bevy-0.19.1/examples/
-```
 
-`examples/3d/split_screen.rs` and `examples/input/gamepad_input.rs` cover the
-two mechanisms this game is built on. Several things were renamed in 0.19 and
-will not be what you remember: events are read with `MessageReader`, not
-`EventReader`; `Timer::finished()` is `is_finished()`; ambient light is the
-`GlobalAmbientLight` resource; `TextFont::font_size` takes `FontSize::Px(..)`.
+Grep that for real class names, method signatures and enum values.
 
-**Tuning values live in `src/config.rs`.** Balance changes belong there, not
-scattered through systems.
+**Tuning values live in `scripts/config.gd`.** Balance and feel changes belong
+there, not scattered through behaviour scripts.
 
-**Nothing leaves the ground plane.** Players and projectiles are constrained to
-a fixed height, and collision is deliberately 2D (XZ) as a result. If you add
-verticality, `player::push_out_of_box` and `combat::hits_player` both need
-revisiting.
+**Input is polled per device, never through the action map.** Godot's input
+actions merge every controller into one, which is exactly wrong for local
+multiplayer. `PlayerInput.read(device)` is the only way input should be read.
 
-**A projectile must be despawned at most once per frame.** Movement, expiry and
-both collision checks deliberately live in the single `update_projectiles`
-system for this reason. Splitting them reintroduces double-despawn warnings.
-
-**Player index is not the split-screen slot.** `Player::index` is stable
+**Player index is not the split-screen slot.** `Player.index` is stable
 identity — it picks the colour and spawn point and survives other players
-leaving. The viewport slot is recomputed each frame from the live player count
-in `camera::assign_viewports`.
+leaving. The viewport slot is recomputed from the live player count in
+`SplitScreen._layout_views()`.
+
+**SubViewports must share the root `World3D`.** That is what makes four
+cameras look into one arena instead of four empty copies of it. If a viewport
+renders black, check `world_3d` first.
+
+**Collision belongs to the physics engine.** Players are `CharacterBody3D` and
+use `move_and_slide()`; the arena is `StaticBody3D`. Do not hand-roll collision
+resolution — an earlier version of this game did, and it was strictly worse.
+
+**A projectile must only be consumed once.** `Projectile` guards this with the
+`_consumed` flag, because `body_entered` can fire more than once before
+`queue_free()` takes effect.
 
 ## Testing what cannot be seen
 
-Nobody reviewing a diff can tell whether a camera ended up behind the player or
-inside their head. The pure functions — viewport layout, stick-to-yaw
-conversion, collision resolution, hit tests — are unit tested, and new geometry
-should come with tests too. Anything requiring a window and a gamepad has to be
-verified by a human actually playing it; say so plainly rather than implying it
-was checked.
+Nobody reviewing a diff can tell whether the camera ended up behind the player
+or inside their head. Geometry, layout and wiring are covered by the headless
+suite, and new geometry should come with tests too.
+
+What the tests genuinely cannot cover is how the game *feels* — movement
+weight, camera comfort, whether a fight is fun, and whether real controllers
+map correctly. Only a human with a gamepad can answer those. Say so plainly
+rather than implying it was checked.

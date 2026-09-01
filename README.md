@@ -1,17 +1,22 @@
 # Couch Arena
 
 A 3D split-screen arena shooter for Windows, for two to four people on one
-couch and one screen. Built in Rust with [Bevy](https://bevyengine.org).
+couch and one screen. Built with [Godot 4.7](https://godotengine.org).
 
 Players join by pressing a button on any connected controller, and the screen
 re-partitions itself as they come and go. There is no lobby to back out to and
 no menu to navigate — plug in a pad, press A, you are in the match.
 
+![Four-player split screen](docs/split-screen.png)
+
 ## Status
 
-Early. The core loop works end to end: join, move, aim, shoot, kill, respawn,
-score. It has not yet been played on real hardware — see
-[docs/ROADMAP.md](docs/ROADMAP.md) for what is next.
+Early, but the core loop works end to end: join, move, aim, shoot, kill,
+respawn, score. The screenshot above is a real frame rendered from the project.
+
+It has **not** been played on real hardware with real controllers. Movement
+feel, camera comfort and controller compatibility are all unverified. See
+[docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
 
 ## Controls
 
@@ -23,46 +28,43 @@ score. It has not yet been played on real hardware — see
 | Fire | Right trigger, `RB`, or `A` | `Space` |
 
 Up to four gamepads are supported, plus one keyboard seat. The keyboard seat
-exists so the game can be launched and checked without any controllers
-attached; it is not intended as a way to play seriously.
+exists so the game can be launched and checked without controllers attached;
+it is not meant as a way to play seriously.
 
-## Building
+## Running it
 
-Requires [Rust](https://rustup.rs). On Windows, the MSVC toolchain is the
-supported target:
-
-```bash
-git clone <this repo>
-cd couch-arena
-cargo run --release
-```
-
-The first build compiles Bevy from source and takes a while. Later builds are
-fast. Debug builds are playable because dependencies are optimised even in the
-dev profile — see the `[profile.dev]` section of `Cargo.toml`.
-
-To ship a build, `cargo build --release` produces a self-contained
-`target/release/couch_arena.exe` with no runtime dependencies and no console
-window.
-
-### Building on Linux
-
-Bevy links against system libraries that are not installed by default:
+Install [Godot 4.7](https://godotengine.org/download) — a single executable,
+no installer and no SDK. Then either open `project.godot` in the editor and
+press F5, or from the command line:
 
 ```bash
-sudo apt-get install libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev pkg-config
+godot --path .
 ```
+
+## Exporting for Windows
+
+In the editor: **Project → Export**, add a Windows Desktop preset, install the
+export templates when prompted, and export. The result is a standalone `.exe`
+plus a `.pck` data file.
 
 ## Development
 
 ```bash
-cargo check --target x86_64-pc-windows-gnu   # verify the shipping target
-cargo test                                   # geometry and input unit tests
-cargo clippy --target x86_64-pc-windows-gnu  # lints; the tree is warning-clean
+# Headless test suite: geometry, input maths, and the join/spawn/score path.
+godot --headless --path . --script res://tests/run_tests.gd
+
+# Re-render docs/split-screen.png from a live four-player match.
+xvfb-run godot --path . --rendering-driver opengl3 \
+    --rendering-method gl_compatibility --script res://tests/screenshot.gd
 ```
 
-Further notes: [docs/DESIGN.md](docs/DESIGN.md) for how the code fits together,
-[CLAUDE.md](CLAUDE.md) for the constraints worth knowing before editing.
+The screenshot script is how this project checks that rendering actually works
+without a physical machine in the loop; on Windows or macOS, drop `xvfb-run`
+and the renderer flags.
+
+Further reading: [docs/DESIGN.md](docs/DESIGN.md) for how the code fits
+together, [CLAUDE.md](CLAUDE.md) for the constraints worth knowing before
+editing.
 
 ## Licence
 

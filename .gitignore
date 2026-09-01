@@ -1,12 +1,13 @@
-# Rust build output
-/target/
+# Godot 4 build and import artefacts
+.godot/
+/android/
+export_presets.cfg
 
-# Bevy/wgpu shader cache
-/.cache/
+# Exported builds
+/build/
+/exports/
 
 # Editor and OS noise
-/.idea/
-/.vscode/
 *.swp
 .DS_Store
 Thumbs.db
