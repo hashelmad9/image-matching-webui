@@ -45,8 +45,9 @@ const MUZZLE_FORWARD := 1.0
 const MUZZLE_HEIGHT := 1.0
 
 # --- camera ---------------------------------------------------------------
-const CAMERA_DISTANCE := 5.0
-const CAMERA_HEIGHT := 5.5
+## Close third-person: just behind and just above the head, looking over it.
+const CAMERA_DISTANCE := 1.0
+const CAMERA_HEIGHT := 2.0
 ## How far ahead of the player the camera aims, in metres.
 const CAMERA_LOOK_AHEAD := 3.0
 ## Higher snaps the camera to the player faster. Units: 1/seconds.

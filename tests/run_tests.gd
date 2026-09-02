@@ -503,11 +503,14 @@ func _test_feel() -> void:
 	box.size = Vector3(10.0, 20.0, 1.0)
 	blocker_shape.shape = box
 	blocker.add_child(blocker_shape)
-	blocker.position = first.global_position + Vector3(0.0, 5.0, 3.0)
+	# A thin wall a little behind the player, between the focus point ahead
+	# of them and where the camera wants to sit.
+	box.size = Vector3(10.0, 20.0, 0.2)
+	blocker.position = first.global_position + Vector3(0.0, 5.0, Config.CAMERA_DISTANCE * 0.6)
 	world.add_child(blocker)
 	await _wait_physics(45)
 	var blocked := view.camera.global_position.distance_to(first.global_position)
-	_check(blocked < clear - 2.0, "camera: pulled in front of cover (%.1f < %.1f)" % [blocked, clear])
+	_check(blocked < clear - 0.15, "camera: pulled in front of cover (%.2f < %.2f)" % [blocked, clear])
 	_check(view.camera.global_position.z < blocker.global_position.z, "camera: stays on the player's side of the wall")
 	blocker.queue_free()
 	await _wait_physics(60)
