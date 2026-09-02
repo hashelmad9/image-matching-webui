@@ -167,3 +167,37 @@ static func player_tint(index: int) -> Color:
 ## Team for the 2v2 modes: seats alternate so P1+P3 face P2+P4.
 static func team_of(index: int) -> int:
 	return index % 2
+
+
+# --- game feel ------------------------------------------------------------
+## Seconds a freshly respawned player cannot be hurt.
+const SPAWN_PROTECTION_SECONDS := 2.0
+## How long a versus corpse stays visible before the respawn timer hides it.
+const CORPSE_SECONDS := 0.7
+const HIT_FLASH_SECONDS := 0.12
+const RESPAWN_MATERIALISE_SECONDS := 0.35
+const SHAKE_FIRE := 0.05
+const SHAKE_HURT := 0.22
+const SHAKE_DEATH := 0.4
+## Higher decays screen shake faster. Units: 1/seconds.
+const SHAKE_DECAY := 9.0
+## How far the camera stays off any cover it would otherwise clip into.
+const CAMERA_COLLISION_MARGIN := 0.35
+
+# --- ricochet -------------------------------------------------------------
+## Every shot bounces off cover this many times before it is spent. The
+## signature mechanic: cover is a weapon, and bank shots are the point.
+const PROJECTILE_BOUNCES := 1
+const MUTATOR_BOUNCES := 8
+
+# --- deathmatch bounty ----------------------------------------------------
+## Killing the outright score leader is worth this many points.
+const BOUNTY_POINTS := 2
+
+# --- horde variety --------------------------------------------------------
+## Wave from which runners can appear, and their share of a wave.
+const HORDE_RUNNER_WAVE := 2
+const HORDE_RUNNER_SHARE := 0.25
+## Wave from which brutes appear; every Nth spawn is one.
+const HORDE_BRUTE_WAVE := 4
+const HORDE_BRUTE_EVERY := 4

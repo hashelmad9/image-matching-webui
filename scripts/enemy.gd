@@ -10,8 +10,17 @@ signal died(enemy: Enemy, killer: Node)
 
 @onready var _character: Node3D = $Character
 
+## Stat blocks. A runner is fragile and quick; a brute is slow and hits hard.
+const KINDS := {
+	"walker": {"health": 1.0, "speed": 1.0, "damage": 1.0, "scale": 0.5, "tint": Color(0.8, 0.95, 0.8)},
+	"runner": {"health": 0.5, "speed": 1.7, "damage": 0.6, "scale": 0.42, "tint": Color(1.0, 0.85, 0.6)},
+	"brute": {"health": 3.0, "speed": 0.65, "damage": 2.2, "scale": 0.68, "tint": Color(0.7, 0.6, 0.9)},
+}
+
+var kind := "walker"
 var health := Config.ENEMY_HEALTH
 var speed := Config.ENEMY_SPEED
+var damage := Config.ENEMY_DAMAGE
 
 var _attack_cooldown := 0.0
 var _detour_time := 0.0
@@ -24,10 +33,22 @@ func _ready() -> void:
 	collision_layer = Config.LAYER_ENEMIES
 	collision_mask = Config.LAYER_WORLD | Config.LAYER_PLAYERS | Config.LAYER_ENEMIES
 	var skin: String = Config.ENEMY_SKINS[randi() % Config.ENEMY_SKINS.size()]
-	CharacterRig.apply_skin(_character, skin, Color(0.8, 0.95, 0.8))
+	var stats: Dictionary = KINDS[kind]
+	CharacterRig.apply_skin(_character, skin, stats["tint"])
+	_character.scale = Vector3.ONE * float(stats["scale"])
 	var animation_player := CharacterRig.build_animation_player(_character)
 	if animation_player != null and animation_player.has_animation("run"):
 		animation_player.play("run")
+
+
+## Sets the stat block. Call before adding to the tree; `wave_speed` is the
+## base speed for the current wave, which the kind then scales.
+func configure(new_kind: String, wave_speed: float) -> void:
+	kind = new_kind
+	var stats: Dictionary = KINDS[kind]
+	health = int(Config.ENEMY_HEALTH * float(stats["health"]))
+	speed = wave_speed * float(stats["speed"])
+	damage = int(Config.ENEMY_DAMAGE * float(stats["damage"]))
 
 
 func _physics_process(delta: float) -> void:
@@ -56,7 +77,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		if _attack_cooldown <= 0.0:
 			_attack_cooldown = Config.ENEMY_ATTACK_COOLDOWN
-			target.take_damage(Config.ENEMY_DAMAGE, self)
+			target.take_damage(damage, self)
 	else:
 		if _detour_time > 0.0:
 			direction = Vector3(-direction.z * _detour_sign, 0.0, direction.x * _detour_sign)

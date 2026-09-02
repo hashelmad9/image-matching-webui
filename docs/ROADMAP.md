@@ -87,14 +87,16 @@ milestone is deliberately first among the remaining work.
 This is the milestone that makes the difference between "works" and "good". It
 is worth more than any amount of extra art.
 
-- [ ] Muzzle flash and a tracer that reads at distance
-- [ ] Hit feedback: victim flash, impact spark, a hit marker for the shooter
-- [ ] Death: ragdoll or a death animation, not the body silently vanishing
-- [ ] Respawn: a brief materialise effect and invulnerability window
-- [ ] Screen shake on firing and on taking damage, scaled per viewport
+- [x] Muzzle flash and a tracer that reads at distance
+- [x] Hit feedback: victim flash, impact spark, a hit marker for the shooter
+- [x] Death: the body falls and lies there before the respawn, rather than
+      vanishing (a proper animation or ragdoll is still open)
+- [x] Respawn: materialise pop and a spawn-protection blink
+- [x] Screen shake on firing and on taking damage, per viewport
 - [ ] Aim/shoot animations — the Kenney pack has only idle/run/jump, so this
       likely means pulling clips from [KayKit](https://kaylousberg.itch.io/kaykit-character-animations)
-- [ ] Camera collision, so cover cannot sit between camera and player
+- [x] Camera collision. Note: at the current camera height nothing in this
+      arena is tall enough to trigger it; it exists for taller geometry
 
 ---
 
@@ -127,10 +129,12 @@ material half is not.
 - [x] Score limit or time limit, and a round that actually ends
 - [x] Countdown before a round starts
 - [x] Between-round screen with final scores
-- [ ] Spawn protection so camping is not free
-- [ ] Bounty on the leader in deathmatch: killing whoever is ahead is worth two
-- [ ] Mutator vote between rounds (low gravity, one-hit kills, ricochet...)
-- [ ] Ricochet as a signature mechanic: shots bounce off cover
+- [x] Spawn protection so camping is not free
+- [x] Bounty on the leader in deathmatch: killing whoever is ahead is worth two
+- [x] Mutator vote between rounds: one-hit kills, infinite ricochet, fast
+      feet, rapid fire, glass cannon — three on each ballot, X/Y/B to vote
+- [x] Ricochet as a signature mechanic: every shot bounces off cover once
+- [ ] Sudden death on a tie: walls close in, or one shared weapon spawns
 
 ---
 
@@ -142,7 +146,8 @@ material half is not.
 - [ ] A second arena, and a way to choose between them
 - [x] Team mode (2v2) — the ball game
 - [ ] Pathfinding for horde enemies (they walk into cover and sidestep)
-- [ ] Horde variety: a fast enemy, a tank, a wave boss
+- [x] Horde variety: runners from wave 2, brutes from wave 4
+- [ ] A wave boss
 
 ---
 

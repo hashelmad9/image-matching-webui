@@ -47,6 +47,45 @@ Projectiles carry two hooks set by the hub at spawn time: `friendly_fire`
 them) and `hit_handler`, which lets a mode claim a hit — the ball game uses
 it to turn a shot into a kick.
 
+## Feel
+
+Small, cheap, and mostly in three places.
+
+- **Effects** (`effects.gd`) are emissive spheres that shrink and free
+  themselves: muzzle flash on firing, a spark wherever a shot lands or
+  bounces, and a pop on respawn. No particles, no textures; they read at
+  split-screen size and cost nothing to author.
+- **The player's one material** carries hit flash (white), spawn-protection
+  blink (own colour), and the tag highlight. They are driven from a single
+  `_tick_feedback()` so they cannot fight over the emission channel.
+- **Screen shake** is per view: `SplitScreen.shake(player, amount)` jitters
+  only that player's camera and decays exponentially. Firing gives a nudge;
+  being hit gives a kick; dying gives a bigger one.
+
+Camera follow moved to `_physics_process` because **camera collision** casts
+a ray from the focus point to the desired eye and pulls the camera in front of
+anything it crosses — and the physics space is locked outside physics
+callbacks. Be aware the ray sits nine metres up at the far end, so nothing in
+this arena is tall enough to trip it; it is there for taller geometry.
+
+## Ricochet
+
+Cover is handled by a ray along each frame's travel rather than by the
+projectile's overlap shape. The ray gives the surface normal for the bounce
+and cannot tunnel through a thin wall at speed. Every shot bounces once by
+default (`PROJECTILE_BOUNCES`); the INFINITE RICOCHET mutator raises it.
+`_on_body_entered` ignores `StaticBody3D` for that reason — the ray already
+dealt with it.
+
+## Mutators and the vote
+
+`mutators.gd` is a registry of round modifiers: a title and a few numbers.
+The results screen draws three at random; players vote with X/Y/B (1/2/3 on
+keyboard); the winner is applied to everyone at the next `start_round()`.
+Application *sets* rather than multiplies, so calling it after a reset is
+safe, and the mode's own `speed_multiplier` (tag's "it" boost) stacks with
+the mutator's `mutator_speed` instead of overwriting it.
+
 ## Joining and seats
 
 `game.gd` holds a fixed array of `MAX_PLAYERS` seats. Joining claims the lowest

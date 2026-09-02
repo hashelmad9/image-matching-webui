@@ -84,6 +84,13 @@ death and stops; the mode decides what it means. Adding a mode means
 subclassing `GameMode` and overriding only what differs — see DESIGN.md. A
 mode that spawns props must free them in `_exit_tree()`.
 
+**Physics queries only in `_physics_process`.** `direct_space_state` is locked
+outside physics callbacks; a ray cast from `_process` errors. The camera
+follow lives in `_physics_process` for exactly this reason.
+
+**A dead player stays visible for `CORPSE_SECONDS`.** Tests that assert a
+body vanishes on death are asserting the wrong contract.
+
 **A projectile must only be consumed once.** `Projectile` guards this with the
 `_consumed` flag, because `body_entered` can fire more than once before
 `queue_free()` takes effect.

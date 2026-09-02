@@ -28,6 +28,9 @@ func _run() -> void:
 	print("\n== game modes ==")
 	await _test_modes()
 
+	print("\n== game feel ==")
+	await _test_feel()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -211,7 +214,7 @@ func _test_join_and_spawn() -> void:
 	await process_frame
 	_check(second.is_dead, "lethal damage kills")
 	_check(first.score == 1, "the killer is credited")
-	_check(not second.visible, "a dead player is hidden")
+	_check(second.visible, "a dead player falls where they stood")
 
 	# And they come back.
 	for i in int((Config.RESPAWN_SECONDS + 0.5) * 60.0):
@@ -314,7 +317,7 @@ func _test_modes() -> void:
 	second.take_damage(10_000, first)
 	await process_frame
 	_check(first.score == 1, "deathmatch: a kill is a point")
-	_check(second.is_dead and not second.visible, "deathmatch: the victim awaits a respawn")
+	_check(second.is_dead and not second.is_downed, "deathmatch: the victim awaits a respawn, not a rescue")
 	first.score = Config.DEATHMATCH_KILL_TARGET
 	await process_frame
 	_check(main.state() == main.State.RESULTS, "deathmatch: reaching the target ends the round")
@@ -367,6 +370,157 @@ func _test_modes() -> void:
 	kick.free()
 	await _wait_physics(2)
 	_check(ball.linear_velocity.x > 0.5, "ball: the shot kicks the ball")
+
+	main.queue_free()
+	await process_frame
+
+
+# --- game feel --------------------------------------------------------------
+
+func _test_feel() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	await process_frame
+	var first: Player = main.players()[0]
+	var second: Player = main.players()[1]
+	var world: Node3D = main.world()
+	var split: SplitScreen = main.get_node("Screens/SplitScreen")
+
+	# --- death, corpse, respawn, protection ----------------------------------
+	main.start_round("deathmatch", true)
+	await process_frame
+	second.take_damage(10_000, first)
+	await process_frame
+	_check(second.is_dead and second.visible, "feel: a versus corpse stays visible briefly")
+	await _wait_physics(int((Config.CORPSE_SECONDS + 0.2) * 60))
+	_check(not second.visible, "feel: the corpse is hidden before the respawn")
+	await _wait_physics(int((Config.RESPAWN_SECONDS - Config.CORPSE_SECONDS) * 60) + 5)
+	_check(not second.is_dead and second.visible, "feel: the player respawns")
+	_check(second.protection > 0.0, "feel: a respawned player is protected")
+	var hp := second.health
+	second.take_damage(50, first)
+	_check(second.health == hp, "feel: damage is ignored during spawn protection")
+	await _wait_physics(int((Config.SPAWN_PROTECTION_SECONDS + 0.2) * 60))
+	_check(second.protection == 0.0, "feel: protection expires")
+	second.take_damage(10, first)
+	_check(second.health == hp - 10, "feel: damage lands once protection is over")
+
+	# --- hit marker, shake and effects -----------------------------------------
+	var view := split.view_for(first)
+	_check(view.hud.get_node("HitMarker").visible, "feel: landing a hit shows the shooter a hit marker")
+	_check(split.view_for(second).shake > 0.0, "feel: taking a hit shakes the victim's view")
+	var effects_before := get_nodes_in_group("effects").size()
+	first.fired.emit(first, first.global_position + Vector3(0, 1, 0), first.forward())
+	await process_frame
+	_check(get_nodes_in_group("effects").size() > effects_before, "feel: firing spawns a muzzle flash")
+	_check(split.view_for(first).shake > 0.0, "feel: firing kicks the shooter's view")
+
+	# --- bounty ----------------------------------------------------------------
+	first.score = 3
+	second.score = 0
+	var mode: GameMode = main._mode
+	_check(mode.bounty_target() == first, "bounty: the outright leader carries the bounty")
+	first.take_damage(10_000, second)
+	await process_frame
+	_check(second.score == Config.BOUNTY_POINTS, "bounty: killing the leader is worth %d" % Config.BOUNTY_POINTS)
+	first.score = 3
+	second.score = 3
+	_check(mode.bounty_target() == null, "bounty: a tie carries no bounty")
+
+	# --- ricochet --------------------------------------------------------------
+	var shot: Projectile = main.PROJECTILE_SCENE.instantiate()
+	shot.shooter = first
+	# Aimed straight at the east wall from just in front of it.
+	shot.position = Vector3(Config.ARENA_HALF_EXTENT - 1.5, Config.MUZZLE_HEIGHT, 0.0)
+	shot.direction = Vector3.RIGHT
+	world.add_child(shot)
+	await _wait_physics(6)
+	_check(is_instance_valid(shot) and not shot.is_queued_for_deletion(), "ricochet: a shot survives its first wall")
+	_check(shot.direction.x < -0.9, "ricochet: and comes back the other way")
+	_check(shot.bounces_left == 0, "ricochet: one bounce is spent")
+	shot.direction = Vector3.RIGHT
+	shot.position = Vector3(Config.ARENA_HALF_EXTENT - 1.5, Config.MUZZLE_HEIGHT, 0.0)
+	await _wait_physics(6)
+	_check(not is_instance_valid(shot) or shot.is_queued_for_deletion(), "ricochet: the second wall spends the shot")
+
+	# --- mutators --------------------------------------------------------------
+	main.set_mutator("fast_feet")
+	_check(first.mutator_speed > 1.0, "mutator: FAST FEET speeds players up")
+	main.set_mutator("glass_cannon")
+	_check(first.max_health == 40 and first.health <= 40, "mutator: GLASS CANNON lowers max health")
+	first.fired.emit(first, first.global_position + Vector3(0, 1, 0), first.forward())
+	await process_frame
+	var last: Projectile = null
+	for node in get_nodes_in_group("projectiles"):
+		last = node
+	_check(last != null and last.damage == 40, "mutator: GLASS CANNON raises shot damage")
+	main.set_mutator("ricochet")
+	first.fired.emit(first, first.global_position + Vector3(0, 1, 0), first.forward())
+	await process_frame
+	for node in get_nodes_in_group("projectiles"):
+		last = node
+	_check(last.bounces_left == Config.MUTATOR_BOUNCES, "mutator: INFINITE RICOCHET adds bounces")
+	# The vote: results screen, two seats vote for option 1, tally applies it.
+	main.set_mutator(Mutators.NONE)
+	first.score = Config.DEATHMATCH_KILL_TARGET
+	await process_frame
+	_check(main.state() == main.State.RESULTS, "vote: results screen reached")
+	_check(main._ballot.size() == 3, "vote: three mutators on the ballot")
+	var chosen: String = main._ballot[1]
+	main.vote(Config.KEYBOARD_DEVICE, 1)
+	main.vote(0, 1)
+	main.next_round()
+	_check(main.mutator() == chosen, "vote: the majority choice is applied next round")
+	_check(first.mutator_speed == Mutators.speed(chosen), "vote: players carry the voted mutator")
+	main.vote(0, 0)
+	_check(main.mutator() == chosen, "vote: votes outside the results screen are ignored")
+
+	# --- camera collision ------------------------------------------------------
+	# Nothing in this arena is tall enough to block a camera nine metres up,
+	# so the mechanism is proven against a temporary tall wall placed between
+	# the player and where the camera wants to be.
+	main.start_round("deathmatch", true)
+	await process_frame
+	first.global_position = Vector3(-15.0, Config.PLAYER_HEIGHT * 0.5, 15.0)
+	first.yaw = 0.0  # facing -Z, so the camera sits at +Z
+	await _wait_physics(60)
+	var clear := view.camera.global_position.distance_to(first.global_position)
+	var blocker := StaticBody3D.new()
+	blocker.collision_layer = Config.LAYER_WORLD
+	var blocker_shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10.0, 20.0, 1.0)
+	blocker_shape.shape = box
+	blocker.add_child(blocker_shape)
+	blocker.position = first.global_position + Vector3(0.0, 5.0, 3.0)
+	world.add_child(blocker)
+	await _wait_physics(45)
+	var blocked := view.camera.global_position.distance_to(first.global_position)
+	_check(blocked < clear - 2.0, "camera: pulled in front of cover (%.1f < %.1f)" % [blocked, clear])
+	_check(view.camera.global_position.z < blocker.global_position.z, "camera: stays on the player's side of the wall")
+	blocker.queue_free()
+	await _wait_physics(60)
+	var restored := view.camera.global_position.distance_to(first.global_position)
+	_check(absf(restored - clear) < 0.5, "camera: back to full distance once clear (%.1f)" % restored)
+
+	# --- enemy variety ---------------------------------------------------------
+	var walker: Enemy = load("res://scenes/enemy.tscn").instantiate()
+	walker.configure("walker", Config.ENEMY_SPEED)
+	var brute: Enemy = load("res://scenes/enemy.tscn").instantiate()
+	brute.configure("brute", Config.ENEMY_SPEED)
+	var runner: Enemy = load("res://scenes/enemy.tscn").instantiate()
+	runner.configure("runner", Config.ENEMY_SPEED)
+	_check(brute.health > walker.health and brute.speed < walker.speed, "horde: a brute is tougher and slower")
+	_check(runner.health < walker.health and runner.speed > walker.speed, "horde: a runner is fragile and quick")
+	_check(brute.damage > walker.damage, "horde: a brute hits harder")
+	for enemy in [walker, brute, runner]:
+		enemy.free()
+	var horde_script := load("res://scripts/modes/horde.gd")
+	_check(horde_script.kind_for_spawn(1, 4) == "walker", "horde: wave one is all walkers")
+	_check(horde_script.kind_for_spawn(Config.HORDE_BRUTE_WAVE, Config.HORDE_BRUTE_EVERY) == "brute", "horde: brutes arrive on schedule")
 
 	main.queue_free()
 	await process_frame

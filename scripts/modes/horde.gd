@@ -8,6 +8,7 @@ var wave := 0
 var _to_spawn := 0
 var _spawn_timer := 0.0
 var _breather := 0.0
+var _spawned_this_wave := 0
 ## Seconds of teammate contact accumulated per downed player.
 var _revive_progress: Dictionary = {}
 
@@ -63,16 +64,30 @@ func tick(delta: float) -> void:
 func _start_wave() -> void:
 	wave += 1
 	_to_spawn = Config.HORDE_BASE_ENEMIES + Config.HORDE_ENEMIES_PER_WAVE * (wave - 1)
+	_spawned_this_wave = 0
 	_spawn_timer = 0.0
 
 
 func _spawn_enemy() -> void:
 	_to_spawn -= 1
+	_spawned_this_wave += 1
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
-	enemy.speed = Config.ENEMY_SPEED + Config.ENEMY_SPEED_PER_WAVE * (wave - 1)
+	var wave_speed := Config.ENEMY_SPEED + Config.ENEMY_SPEED_PER_WAVE * (wave - 1)
+	enemy.configure(kind_for_spawn(wave, _spawned_this_wave), wave_speed)
 	enemy.position = _spawn_point()
 	enemy.died.connect(_on_enemy_died)
 	hub.world().add_child(enemy)
+
+
+## Which enemy the Nth spawn of a wave is. Early waves are all walkers;
+## runners join from HORDE_RUNNER_WAVE, and a brute every few spawns from
+## HORDE_BRUTE_WAVE, so each wave feels different from the last.
+static func kind_for_spawn(wave_number: int, ordinal: int) -> String:
+	if wave_number >= Config.HORDE_BRUTE_WAVE and ordinal % Config.HORDE_BRUTE_EVERY == 0:
+		return "brute"
+	if wave_number >= Config.HORDE_RUNNER_WAVE and randf() < Config.HORDE_RUNNER_SHARE:
+		return "runner"
+	return "walker"
 
 
 ## A random point on the arena's edge, away from anyone still standing.

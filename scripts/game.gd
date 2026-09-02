@@ -44,6 +44,10 @@ var _timer := 0.0
 var _headline := ""
 ## Session wins per seat index, shown on every results screen.
 var _session_wins: Dictionary = {}
+## Mutator in force this round, and the vote for the next one.
+var _mutator := Mutators.NONE
+var _ballot: Array[String] = []
+var _votes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -74,6 +78,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					_cycle_mode(-1)
 				JOY_BUTTON_DPAD_RIGHT:
 					_cycle_mode(1)
+		elif _state == State.RESULTS:
+			var choice := Mutators.VOTE_BUTTONS.find(button.button_index)
+			if choice != -1:
+				vote(button.device, choice)
 	elif event is InputEventKey:
 		var key := event as InputEventKey
 		if not key.pressed or key.echo:
@@ -85,6 +93,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_start_from_lobby()
 		elif key.keycode == KEY_TAB and _state == State.LOBBY:
 			_cycle_mode(1)
+		elif _state == State.RESULTS:
+			var choice := Mutators.VOTE_KEYS.find(key.keycode)
+			if choice != -1:
+				vote(Config.KEYBOARD_DEVICE, choice)
 
 
 func _cycle_mode(step: int) -> void:
@@ -123,7 +135,10 @@ func _spawn_player(index: int, device: int) -> void:
 	_players_root.add_child(player)
 	player.fired.connect(_on_player_fired)
 	player.died.connect(_on_player_died)
+	player.damaged.connect(_on_player_damaged)
+	player.respawned.connect(_on_player_respawned)
 	_split_screen.add_view(player)
+	_apply_mutator_to(player)
 	if _mode != null and _state != State.LOBBY:
 		player.can_fire = _mode.can_fire()
 		player.controls_enabled = _state == State.PLAYING
@@ -188,6 +203,7 @@ func start_round(mode_id: String, skip_countdown := false) -> void:
 		player.reset_for_round()
 		player.can_fire = _mode.can_fire()
 		player.controls_enabled = false
+		_apply_mutator_to(player)
 
 	_state = State.COUNTDOWN
 	_timer = Config.COUNTDOWN_SECONDS
@@ -210,22 +226,52 @@ func _end_round() -> void:
 		_session_wins[winner.index] = int(_session_wins.get(winner.index, 0)) + 1
 	for player in players():
 		player.controls_enabled = false
+	_ballot = Mutators.ballot()
+	_votes.clear()
 	_state = State.RESULTS
 	_timer = Config.RESULTS_SECONDS
 
 
-## Advances the rotation and starts the next round.
+## Records a seat's vote for the next round's mutator.
+func vote(device: int, choice: int) -> void:
+	if _state != State.RESULTS or choice < 0 or choice >= _ballot.size():
+		return
+	_votes[device] = _ballot[choice]
+
+
+## Advances the rotation and starts the next round with the voted mutator.
 func next_round() -> void:
 	if players().is_empty():
 		_return_to_lobby()
 		return
+	_mutator = Mutators.tally(_votes, _ballot)
 	var count := Config.MODE_ROTATION.size()
 	_rotation_index = (_rotation_index + 1) % count
 	start_round(current_mode_id())
 
 
+## Applies the round's mutator to one player. Sets, not multiplies, so it is
+## safe to call again after reset_for_round().
+func _apply_mutator_to(player: Player) -> void:
+	player.mutator_speed = Mutators.speed(_mutator)
+	player.mutator_fire_scale = Mutators.fire_scale(_mutator)
+	player.max_health = Mutators.health(_mutator)
+	player.health = mini(player.health, player.max_health)
+
+
+func set_mutator(id: String) -> void:
+	_mutator = id
+	for player in players():
+		_apply_mutator_to(player)
+
+
+func mutator() -> String:
+	return _mutator
+
+
 func _return_to_lobby() -> void:
 	_clear_arena()
+	_mutator = Mutators.NONE
 	if _mode != null:
 		_mode.queue_free()
 		_mode = null
@@ -237,7 +283,7 @@ func _return_to_lobby() -> void:
 
 ## Removes everything a round leaves lying around.
 func _clear_arena() -> void:
-	for group in ["enemies", "projectiles"]:
+	for group in ["enemies", "projectiles", "effects"]:
 		for node in get_tree().get_nodes_in_group(group):
 			node.queue_free()
 
@@ -267,12 +313,28 @@ func _on_player_fired(shooter: Player, origin: Vector3, direction: Vector3) -> v
 	projectile.shooter = shooter
 	projectile.direction = direction
 	projectile.tint(Config.player_color(shooter.index))
+	projectile.damage = Mutators.damage(_mutator)
+	projectile.bounces_left = Mutators.bounces(_mutator)
 	if _state == State.PLAYING:
 		projectile.friendly_fire = _mode.friendly_fire()
 		projectile.hit_handler = Callable(_mode, "projectile_hit")
 	# The world sits at the origin, so a local position is already a world one.
 	projectile.position = origin
 	_world.add_child(projectile)
+	Effects.muzzle_flash(_world, origin, Config.player_color(shooter.index))
+	_split_screen.shake(shooter, Config.SHAKE_FIRE)
+
+
+func _on_player_damaged(victim: Player, _amount: int, attacker: Node) -> void:
+	_split_screen.shake(victim, Config.SHAKE_DEATH if victim.health <= 0 else Config.SHAKE_HURT)
+	if attacker is Player and attacker != victim:
+		var view := _split_screen.view_for(attacker as Player)
+		if view != null and view.hud != null:
+			view.hud.hit_marker()
+
+
+func _on_player_respawned(player: Player) -> void:
+	Effects.muzzle_flash(_world, player.global_position, Config.player_color(player.index))
 
 
 func _on_player_died(victim: Player, killer: Node) -> void:
@@ -328,12 +390,15 @@ func _refresh_ui() -> void:
 			_centre.visible = false
 			_top_bar.visible = true
 			var clock := "" if is_inf(_timer) else "  ·  " + GameMode.format_time(_timer)
-			_top_bar.text = "%s  ·  %s%s" % [mode_title, _mode.status_line(), clock]
+			var twist := "" if _mutator == Mutators.NONE else "  ·  " + Mutators.title(_mutator)
+			_top_bar.text = "%s%s  ·  %s%s" % [mode_title, twist, _mode.status_line(), clock]
 		State.RESULTS:
 			_top_bar.visible = false
 			_centre.visible = true
 			_centre_title.text = _headline
-			_centre_subtitle.text = "%s\nnext: %s" % [_standings(), _peek_next_title()]
+			_centre_subtitle.text = "%s\nnext: %s\n\n%s" % [
+				_standings(), _peek_next_title(), _ballot_text()
+			]
 
 	for player in players():
 		player.hud_status = _mode.hud_text(player) if _state == State.PLAYING else ""
@@ -344,6 +409,20 @@ func _standings() -> String:
 	for player in players():
 		parts.append("P%d ×%d" % [player.index + 1, int(_session_wins.get(player.index, 0))])
 	return "SESSION WINS   " + "   ".join(parts)
+
+
+func _ballot_text() -> String:
+	var parts: PackedStringArray = []
+	for i in _ballot.size():
+		var count := 0
+		for choice in _votes.values():
+			if choice == _ballot[i]:
+				count += 1
+		var tally := "  (%d)" % count if count > 0 else ""
+		parts.append("[%s / %d]  %s%s" % [
+			Mutators.VOTE_BUTTON_NAMES[i], i + 1, Mutators.title(_ballot[i]), tally
+		])
+	return "VOTE THE NEXT MUTATOR      " + "      ".join(parts)
 
 
 func _peek_next_title() -> String:

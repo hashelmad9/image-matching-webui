@@ -4,8 +4,17 @@ class_name HUD
 extends Control
 
 @onready var _label: Label = $Margin/Label
+@onready var _hit_marker: Label = $HitMarker
 
 var _player: Player = null
+var _marker_time := 0.0
+
+
+## Flashes the hit marker in the centre of this player's view.
+func hit_marker() -> void:
+	_marker_time = Config.HIT_FLASH_SECONDS
+	if _hit_marker != null:
+		_hit_marker.visible = true
 
 
 ## Attaches this HUD to a player. Safe to call before the node enters the
@@ -26,7 +35,11 @@ func _apply_colour() -> void:
 	_label.add_theme_color_override("font_color", Config.player_color(_player.index))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _marker_time > 0.0:
+		_marker_time -= delta
+		if _marker_time <= 0.0 and _hit_marker != null:
+			_hit_marker.visible = false
 	if _player == null or not is_instance_valid(_player) or _label == null:
 		return
 	var status := _player.hud_status

@@ -12,6 +12,9 @@ signal died(victim: Player, killer: Node)
 ## The game spawns the projectile, so the player does not need to know where
 ## projectiles live in the scene tree.
 signal fired(shooter: Player, origin: Vector3, direction: Vector3)
+## Emitted on every hit that lands, before death is decided.
+signal damaged(victim: Player, amount: int, attacker: Node)
+signal respawned(player: Player)
 
 @onready var _character: Node3D = $Character
 
@@ -32,11 +35,21 @@ var controls_enabled := true
 ## Set by the current mode; tag turns shooting off entirely.
 var can_fire := true
 var speed_multiplier := 1.0
+## Round-wide modifiers from the mutator vote. Separate from the mode's own
+## speed_multiplier so tag's "it" boost and FAST FEET stack cleanly.
+var mutator_speed := 1.0
+var mutator_fire_scale := 1.0
+var max_health := Config.PLAYER_MAX_HEALTH
 ## Mode-provided HUD line. Empty falls back to health and kills.
 var hud_status := ""
+## Seconds of spawn protection remaining.
+var protection := 0.0
 
 var _fire_cooldown := 0.0
 var _respawn_countdown := -1.0
+var _corpse_time := 0.0
+var _hit_flash := 0.0
+var _materialise := 0.0
 var _animation_player: AnimationPlayer = null
 var _current_animation := ""
 var _material: StandardMaterial3D = null
@@ -63,7 +76,12 @@ func setup(player_index: int, input_device: int) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_tick_feedback(delta)
 	if is_dead:
+		if _corpse_time > 0.0:
+			_corpse_time -= delta
+			if _corpse_time <= 0.0 and _respawn_countdown > 0.0:
+				visible = false
 		if _respawn_countdown > 0.0:
 			_respawn_countdown -= delta
 			if _respawn_countdown <= 0.0:
@@ -71,6 +89,7 @@ func _physics_process(delta: float) -> void:
 		_play("idle")
 		return
 
+	protection = maxf(0.0, protection - delta)
 	_fire_cooldown = maxf(0.0, _fire_cooldown - delta)
 
 	var input := PlayerInput.read(device) if controls_enabled else PlayerInput.new()
@@ -101,7 +120,7 @@ func _update_movement(input: PlayerInput, delta: float) -> void:
 	# Movement is camera-relative, and the camera shares the player's yaw, so
 	# pushing forward always moves the way the player faces.
 	var direction := Basis(Vector3.UP, yaw) * Vector3(input.move_axis.x, 0.0, -input.move_axis.y)
-	var speed := Config.PLAYER_SPEED * speed_multiplier
+	var speed := Config.PLAYER_SPEED * speed_multiplier * mutator_speed
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 
@@ -133,7 +152,7 @@ func _update_movement(input: PlayerInput, delta: float) -> void:
 func _update_firing(input: PlayerInput) -> void:
 	if not input.firing or _fire_cooldown > 0.0:
 		return
-	_fire_cooldown = Config.FIRE_COOLDOWN
+	_fire_cooldown = Config.FIRE_COOLDOWN * mutator_fire_scale
 	var direction := forward()
 	var origin := global_position + direction * Config.MUZZLE_FORWARD
 	origin.y = Config.MUZZLE_HEIGHT
@@ -154,9 +173,11 @@ func forward() -> Vector3:
 
 
 func take_damage(amount: int, attacker: Node) -> void:
-	if is_dead:
+	if is_dead or protection > 0.0:
 		return
 	health -= amount
+	_hit_flash = Config.HIT_FLASH_SECONDS
+	damaged.emit(self, amount, attacker)
 	if health > 0:
 		return
 	health = 0
@@ -167,10 +188,12 @@ func take_damage(amount: int, attacker: Node) -> void:
 	died.emit(self, attacker)
 
 
-## Vanish and come back at a spawn point after a delay. Versus modes.
+## Fall, lie there briefly, then come back at a spawn point. Versus modes.
 func schedule_respawn(seconds: float) -> void:
-	visible = false
 	is_downed = false
+	visible = true
+	_character.rotation.x = -PI * 0.45
+	_corpse_time = minf(Config.CORPSE_SECONDS, seconds)
 	_respawn_countdown = seconds
 
 
@@ -187,10 +210,14 @@ func revive_in_place() -> void:
 	_restore()
 
 
-## Get back up at your spawn point.
+## Get back up at your spawn point, briefly untouchable while you get your
+## bearings, so spawn camping is not free.
 func respawn() -> void:
 	_restore()
 	_move_to_spawn()
+	protection = Config.SPAWN_PROTECTION_SECONDS
+	_materialise = Config.RESPAWN_MATERIALISE_SECONDS
+	respawned.emit(self)
 
 
 ## Full reset between rounds: alive, healthy, unmarked, at spawn, score zero.
@@ -199,6 +226,11 @@ func reset_for_round() -> void:
 	score = 0
 	hud_status = ""
 	speed_multiplier = 1.0
+	mutator_speed = 1.0
+	mutator_fire_scale = 1.0
+	max_health = Config.PLAYER_MAX_HEALTH
+	health = max_health
+	protection = 0.0
 	can_fire = true
 	highlight(false)
 	_move_to_spawn()
@@ -213,10 +245,37 @@ func highlight(on: bool) -> void:
 	_material.emission_energy_multiplier = 1.5 if on else 0.0
 
 
+## Hit flash, spawn-protection blink and the materialise pop, all driven from
+## the one material so they cannot fight each other.
+func _tick_feedback(delta: float) -> void:
+	if _materialise > 0.0:
+		_materialise = maxf(0.0, _materialise - delta)
+		var t := 1.0 - _materialise / Config.RESPAWN_MATERIALISE_SECONDS
+		_character.scale = Vector3.ONE * lerpf(0.05, 0.5, t)
+	if _material == null:
+		return
+	if _hit_flash > 0.0:
+		_hit_flash = maxf(0.0, _hit_flash - delta)
+		_material.emission_enabled = true
+		_material.emission = Color.WHITE
+		_material.emission_energy_multiplier = 3.0
+	elif protection > 0.0:
+		var blink := 0.5 + 0.5 * sin(protection * 24.0)
+		_material.emission_enabled = true
+		_material.emission = Config.player_color(index)
+		_material.emission_energy_multiplier = 1.5 * blink
+	elif _material.emission_energy_multiplier > 0.0 and _material.emission != Config.player_color(index):
+		# A flash just ended; hand the material back to highlight().
+		_material.emission_enabled = false
+		_material.emission_energy_multiplier = 0.0
+
+
 func _restore() -> void:
 	is_dead = false
 	is_downed = false
-	health = Config.PLAYER_MAX_HEALTH
+	health = max_health
+	_corpse_time = 0.0
+	_hit_flash = 0.0
 	visible = true
 	collision_layer = Config.LAYER_PLAYERS
 	_respawn_countdown = -1.0

@@ -16,6 +16,10 @@ var friendly_fire := true
 ## Optional `(projectile, body) -> bool`. Returning true means the mode
 ## handled the hit and the shot is spent.
 var hit_handler := Callable()
+## Bounces off cover left before the shot is spent.
+var bounces_left := Config.PROJECTILE_BOUNCES
+## Colour of the tracer, also used for its sparks.
+var colour := Color.WHITE
 
 @onready var _mesh: MeshInstance3D = $Mesh
 
@@ -43,8 +47,9 @@ func _ready() -> void:
 
 ## Sets the tracer colour. Safe to call before the node enters the tree; the
 ## colour is applied on ready.
-func tint(colour: Color) -> void:
-	_tint = colour
+func tint(new_colour: Color) -> void:
+	_tint = new_colour
+	colour = new_colour
 	if is_node_ready():
 		_apply_tint()
 
@@ -76,7 +81,29 @@ func _physics_process(delta: float) -> void:
 		_consume()
 		return
 
-	global_position += direction * Config.PROJECTILE_SPEED * delta
+	# Cover is handled by a ray along this frame's travel rather than by the
+	# overlap shape: a ray gives the surface normal for the bounce and cannot
+	# tunnel through a thin wall at high speed.
+	var from := global_position
+	var to := from + direction * Config.PROJECTILE_SPEED * delta
+	var query := PhysicsRayQueryParameters3D.create(from, to, Config.LAYER_WORLD)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty():
+		var world := get_parent() as Node3D
+		if world != null:
+			Effects.spark(world, hit["position"], colour)
+		if bounces_left <= 0:
+			_consume()
+			return
+		bounces_left -= 1
+		var normal: Vector3 = hit["normal"]
+		direction = direction.bounce(normal)
+		direction.y = 0.0
+		direction = direction.normalized()
+		global_position = hit["position"] + normal * (Config.PROJECTILE_RADIUS + 0.05)
+		return
+
+	global_position = to
 
 	# A shot that somehow escapes the arena is cheaper to drop than to track.
 	var bound := Config.ARENA_HALF_EXTENT + 2.0
@@ -90,10 +117,15 @@ func _on_body_entered(body: Node3D) -> void:
 	if hit_handler.is_valid() and hit_handler.call(self, body):
 		_consume()
 		return
+	if body is StaticBody3D:
+		return  # Cover is resolved by the travel ray, which knows the normal.
 	if body is Player and not friendly_fire:
 		return  # Pass through a teammate rather than wasting the shot.
 	if body.has_method("take_damage"):
 		body.take_damage(damage, shooter)
+		var world := get_parent() as Node3D
+		if world != null:
+			Effects.spark(world, global_position, colour)
 	_consume()
 
 

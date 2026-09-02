@@ -19,6 +19,8 @@ class View:
 	var viewport: SubViewport
 	var camera: Camera3D
 	var hud: HUD
+	## Current screen-shake amplitude, in metres of camera jitter.
+	var shake := 0.0
 
 
 var _views: Array[View] = []
@@ -30,7 +32,9 @@ func _ready() -> void:
 	resized.connect(_layout_views)
 
 
-func _process(delta: float) -> void:
+# Physics rate rather than frame rate: the camera-collision ray needs the
+# physics space, which is locked outside _physics_process.
+func _physics_process(delta: float) -> void:
 	_follow_players(delta)
 
 
@@ -78,6 +82,20 @@ func remove_view(player: Player) -> void:
 
 func view_count() -> int:
 	return _views.size()
+
+
+func view_for(player: Player) -> View:
+	for view in _views:
+		if view.player == player:
+			return view
+	return null
+
+
+## Kicks one player's camera. Amplitudes do not stack; the bigger one wins.
+func shake(player: Player, amount: float) -> void:
+	var view := view_for(player)
+	if view != null:
+		view.shake = maxf(view.shake, amount)
 
 
 ## Slot layout for `count` players. Slot 0 is top-left and slots fill left to
@@ -130,7 +148,22 @@ func _place_camera(view: View, blend: float) -> void:
 		+ Vector3.UP
 	)
 
-	view.camera.global_position = view.camera.global_position.lerp(eye, blend)
+	# Pull the camera in front of any cover between it and the player, so a
+	# block can never sit between the two.
+	var space := view.camera.get_world_3d().direct_space_state
+	if space != null:
+		var query := PhysicsRayQueryParameters3D.create(focus, eye, Config.LAYER_WORLD)
+		var hit := space.intersect_ray(query)
+		if not hit.is_empty():
+			eye = hit["position"] + hit["normal"] * Config.CAMERA_COLLISION_MARGIN
+
+	var position: Vector3 = view.camera.global_position.lerp(eye, blend)
+	if view.shake > 0.0:
+		position += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), 0.0) * view.shake
+		view.shake *= exp(-Config.SHAKE_DECAY * get_physics_process_delta_time())
+		if view.shake < 0.002:
+			view.shake = 0.0
+	view.camera.global_position = position
 	# Re-aiming from the already-smoothed position each frame gives a stable
 	# look without interpolating rotation separately.
 	if not view.camera.global_position.is_equal_approx(focus):
