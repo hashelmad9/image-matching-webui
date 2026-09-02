@@ -40,6 +40,9 @@ func _run() -> void:
 	print("\n== menus and settings ==")
 	await _test_menus()
 
+	print("\n== arenas ==")
+	await _test_arenas()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -947,3 +950,68 @@ func _test_menus() -> void:
 	main.queue_free()
 	await process_frame
 	paused = false
+
+
+# --- arenas -----------------------------------------------------------------------
+
+func _test_arenas() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	main.play()
+	var arena: Node3D = main.get_node("World/Arena")
+	_check(main.arena_name() == Arenas.DEFAULT, "arena: the default layout is built at launch")
+	var pieces: Node3D = arena.get_node("Pieces")
+	var tiles := 0
+	var bodies := 0
+	for child in pieces.get_children():
+		if child is StaticBody3D:
+			bodies += 1
+	for child in pieces.get_node("Floor").get_children():
+		if not child is CollisionShape3D:
+			tiles += 1
+	var per_side := int(round(Config.ARENA_HALF_EXTENT * 2.0 / ArenaBuilder.TILE))
+	_check(tiles == per_side * per_side, "arena: the floor is tiled edge to edge (%d tiles)" % tiles)
+	_check(bodies >= per_side * 4 + 4 + 5, "arena: walls, corners and cover all have bodies (%d)" % bodies)
+
+	# Solidity: a ray from above hits the floor at the origin's neighbour and
+	# the centre block on top; the doorway of a gate is open.
+	await physics_frame
+	var space: PhysicsDirectSpaceState3D = main.world().get_world_3d().direct_space_state
+	var down := func(x: float, z: float) -> float:
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, 20, z), Vector3(x, -5, z), Config.LAYER_WORLD))
+		return float(hit["position"].y) if not hit.is_empty() else -99.0
+	_check(absf(down.call(0.0, 4.0)) < 0.05, "arena: the floor is solid at y=0 (%.2f)" % down.call(0.0, 4.0))
+	_check(down.call(0.0, 0.0) > 3.0, "arena: the centre block is solid (%.2f high)" % down.call(0.0, 0.0))
+	var through: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(
+		Vector3(0.0, 1.0, -12.0), Vector3(0.0, 1.0, -6.0), Config.LAYER_WORLD))
+	_check(through.is_empty(), "arena: a gate's doorway is open at body height")
+	_check(down.call(0.0, -9.0) > 3.5, "arena: but its lintel is solid overhead")
+	_check(down.call(-1.6, -9.0) > 4.0, "arena: a gate's post is solid")
+	_check(down.call(0.0, -16.4) > 4.0, "arena: the perimeter wall is solid just outside the edge")
+	_check(absf(down.call(0.0, -15.6)) < 0.05, "arena: and the floor is clear just inside it")
+	for point in [Config.spawn_point(0), Config.spawn_point(3)]:
+		_check(absf(down.call(point.x, point.z)) < 0.05, "arena: spawn corner is clear (%.0f, %.0f)" % [point.x, point.z])
+	_check(main.navigation().navigation_mesh.get_polygon_count() > 0, "arena: navigation baked over the kit")
+
+	# Switching arenas rebuilds and rebakes at the next round.
+	Settings.arena = "corridors"
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	main.start_round("deathmatch", true)
+	await process_frame
+	_check(main.arena_name() == "corridors", "arena: the match-setup choice is built at round start")
+	_check(is_instance_valid(main.navigation()) and main.navigation().navigation_mesh.get_polygon_count() > 0,
+		"arena: navigation is rebaked for the new layout")
+	await physics_frame
+	_check(down.call(0.0, -6.0) > 4.0, "arena: corridors has its lane wall")
+	main.start_round("tag", true)
+	await process_frame
+	_check(main.arena_name() == "corridors", "arena: an unchanged choice does not rebuild")
+	Settings.arena = Arenas.DEFAULT
+	main.open_match_menu()
+	_check(main._menus.back().value_of("arena") == "STATION", "arena: match setup shows the arena choice")
+	main._menus.back().back()
+
+	main.queue_free()
+	await process_frame

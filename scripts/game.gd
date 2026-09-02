@@ -82,9 +82,9 @@ func _ready() -> void:
 	# Menu sounds must play while the round is paused.
 	_sfx.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_sfx)
-	_navigation = NavigationBuilder.build(_world, $World/Arena)
 	Settings.load_from_disk()
 	Settings.apply_all()
+	_build_arena(Settings.arena)
 	_refresh_lobby()
 	open_main_menu()
 	_refresh_ui()
@@ -242,9 +242,23 @@ func state() -> State:
 	return _state
 
 
+## Assembles the arena from its layout and bakes navigation over it.
+func _build_arena(name: String) -> void:
+	ArenaBuilder.build($World/Arena, name)
+	if _navigation != null:
+		_navigation.queue_free()
+	_navigation = NavigationBuilder.build(_world, $World/Arena)
+
+
+func arena_name() -> String:
+	return ArenaBuilder.built_name($World/Arena)
+
+
 ## Starts a round of `mode_id`. `skip_countdown` is for tests and renders.
 func start_round(mode_id: String, skip_countdown := false) -> void:
 	_clear_arena()
+	if arena_name() != Settings.arena:
+		_build_arena(Settings.arena)
 	if _mode != null:
 		_mode.queue_free()
 	_mode = MODE_SCRIPTS[mode_id].new()
@@ -611,6 +625,10 @@ func open_match_menu() -> void:
 			"get": func() -> float: return float(Settings.match_horde_start_wave),
 			"set": func(v: float) -> void: Settings.match_horde_start_wave = int(v),
 			"format": func(v: float) -> String: return str(int(v))},
+		{"id": "arena", "kind": "choice", "label": "ARENA", "values": Arenas.names(),
+			"get": func() -> String: return Settings.arena,
+			"set": func(v: String) -> void: Settings.arena = v,
+			"format": func(v: String) -> String: return Arenas.title(v)},
 		{"id": "mutators", "kind": "toggle", "label": "MUTATOR VOTES",
 			"get": func() -> bool: return Settings.match_mutators,
 			"set": func(v: bool) -> void: Settings.match_mutators = v},
@@ -680,7 +698,7 @@ func _refresh_ui() -> void:
 		State.LOBBY:
 			_lobby_seats.text = _seats_text()
 			_lobby_mode.text = "◄   %s   ►" % mode_title
-			_lobby_blurb.text = mode_blurb
+			_lobby_blurb.text = "%s   ·   arena: %s" % [mode_blurb, Arenas.title(Settings.arena)]
 		State.COUNTDOWN:
 			_countdown_title.text = mode_title
 			_countdown_number.text = str(int(ceil(_timer)))

@@ -60,7 +60,9 @@ covers volume, camera distance/height/field of view, invert aim, stick
 deadzone, screen shake, hit flash, window mode and v-sync, and is saved to
 `user://settings.cfg`. Match Setup sets round length, the deathmatch kill
 target, horde's starting wave, and whether mutator votes happen at all.
-Everything is navigable with a pad; nobody on a couch has a mouse.
+Everything is navigable with a pad; nobody on a couch has a mouse. Two arenas
+so far, built from Kenney's Modular Space Kit; a third is a dozen lines of
+layout data.
 
 Up to four gamepads are supported, plus one keyboard seat. The keyboard seat
 exists so the game can be launched and checked without controllers attached;

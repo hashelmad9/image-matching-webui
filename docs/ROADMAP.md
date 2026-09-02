@@ -117,8 +117,7 @@ material half is not.
 - [x] SSAO and depth fog
 - [ ] **Verify the shadows on real hardware** — see M3; they are set blind
 - [ ] Commit to one art direction in writing, then judge every asset against it
-- [ ] Replace box cover with modelled props ([Kenney Prototype Kit](https://kenney.nl/assets/prototype-kit),
-      [Quaternius Sci-Fi Essentials](https://quaternius.com/packs/scifiessentialskit.html))
+- [x] Replace box cover with modelled props — the Modular Space Kit
 - [x] PBR floor, wall and cover materials from [ambientCG](https://ambientcg.com/),
       triplanar-mapped so nothing needed UVs
 - [x] HDRI sky (Poly Haven sunset) in place of the procedural one
@@ -147,7 +146,7 @@ material half is not.
 - [x] A second and third weapon with meaningfully different feel: a scatter
       gun and a rail gun, Kenney Blaster Kit models in hand
 - [x] Weapon pickups at the four mid-edges, respawning after a delay
-- [ ] A second arena, and a way to choose between them
+- [x] Two arenas built from Kenney's Modular Space Kit, chosen in Match Setup
 - [x] Team mode (2v2) — the ball game
 - [x] Pathfinding for horde enemies: a navigation mesh baked at startup
 - [x] Horde variety: runners from wave 2, brutes from wave 4

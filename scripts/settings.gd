@@ -34,6 +34,7 @@ static var match_round_seconds := 90.0
 static var match_kill_target := Config.DEATHMATCH_KILL_TARGET
 static var match_horde_start_wave := 1
 static var match_mutators := true
+static var arena := Arenas.DEFAULT
 
 ## Names of everything above, in save-file order.
 const KEYS: Array[String] = [
@@ -41,6 +42,7 @@ const KEYS: Array[String] = [
 	"camera_distance", "camera_height", "camera_fov", "invert_aim_y", "stick_deadzone",
 	"window_mode", "vsync", "screen_shake", "hit_flash",
 	"match_round_seconds", "match_kill_target", "match_horde_start_wave", "match_mutators",
+	"arena",
 ]
 
 
@@ -60,6 +62,7 @@ static func reset_defaults() -> void:
 	match_kill_target = Config.DEATHMATCH_KILL_TARGET
 	match_horde_start_wave = 1
 	match_mutators = true
+	arena = Arenas.DEFAULT
 
 
 ## Reads the file if there is one; unknown or missing keys keep their default.
@@ -97,6 +100,7 @@ static func _read(key: String) -> Variant:
 		"match_kill_target": return match_kill_target
 		"match_horde_start_wave": return match_horde_start_wave
 		"match_mutators": return match_mutators
+		"arena": return arena
 	return null
 
 
@@ -117,6 +121,7 @@ static func _write(key: String, value: Variant) -> void:
 		"match_kill_target": match_kill_target = clampi(int(value), 3, 50)
 		"match_horde_start_wave": match_horde_start_wave = clampi(int(value), 1, 20)
 		"match_mutators": match_mutators = bool(value)
+		"arena": arena = str(value) if Arenas.LAYOUTS.has(str(value)) else Arenas.DEFAULT
 
 
 ## Pushes the audio settings to the mixer.

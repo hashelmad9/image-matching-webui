@@ -54,10 +54,11 @@ Grep that for real class names, method signatures and enum values.
 node's properties at the first `#` line and silently keeps defaults for the
 rest. Explanations go in `docs/`, not the scene file.
 
-**The arena is generated.** Its size is `ARENA_HALF_EXTENT` in
-`scripts/config.gd`; after changing it run `python3 tools/generate_arena.py`,
-which rewrites only the geometry in `scenes/arena.tscn` and keeps the
-hand-tuned environment, materials and lights.
+**Arenas are data, built at runtime.** A layout in `scripts/arenas.gd` lists
+cover pieces; `ArenaBuilder` tiles the floor, rings the walls and adds box
+collision from each piece's mesh bounds. `scenes/arena.tscn` holds only the
+environment and lights. Every layout must keep the corners, mid-edges and
+the ±4 m points on Z clear — spawns, pickups and the hill test live there.
 
 **Player-facing settings are `Settings`, not `Config`.** Camera offsets,
 deadzone, volumes, shake — anything a player can change — is read live from

@@ -41,6 +41,12 @@ screen pays it four times.
 | `assets/audio/*.ogg` (21 clips) | [Kenney — Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds), [Impact Sounds](https://kenney.nl/assets/impact-sounds), [UI Audio](https://kenney.nl/assets/ui-audio) | CC0 | Every sound in `scripts/sfx.gd` |
 | `assets/sky/belfast_sunset_puresky_1k.hdr` | [Poly Haven](https://polyhaven.com/a/belfast_sunset_puresky) | CC0 | The sky, and the ambient light it feeds |
 
+| `assets/kit/space/*.glb` + `Textures/` | [Kenney — Modular Space Kit](https://kenney.nl/assets/modular-space-kit) | CC0 | The arenas: floor tiles, walls, gates, blocks, pillars |
+
+The ambientCG materials above are no longer on any surface — the kit brings
+its own look and mixing the two read worse than either — but they stay in
+the tree as a spare for a future arena with a different mood.
+
 Clips are renamed to what they are for (`fire_0`, `wall_1`, `goal`), so the
 sound table reads without cross-referencing pack filenames.
 
@@ -106,6 +112,13 @@ and comparing; `tests/screenshot.gd` is the pattern to copy.
 **The importer already applies axis correction.** Kenney's FBX files are
 authored Z-up, but Godot lands them upright and Y-up. Adding a −90° X rotation
 to "fix" it lays the character flat on its back.
+
+**The Space Kit is metric on a 4-metre grid.** Floor tiles are 4×4, wall
+segments 4 long × 1 thick × 4.25 high, and a wall's solid part lies on its
+own −Z side, so an edge wall must face outward or its thickness eats a metre
+of arena. `ArenaBuilder` measures each piece's mesh bounds for collision;
+that works because these are plain static meshes, not the skinned character
+that lied about its size.
 
 **Materials use world-space triplanar mapping.** Godot's `BoxMesh` lays its
 six faces out across the UV square, so a tiling texture on a 48-metre floor

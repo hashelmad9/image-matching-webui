@@ -230,6 +230,23 @@ gives a stable result with less machinery.
 A lobby camera in the root viewport shows the empty arena until the first
 player joins, so launching the game never presents a black screen.
 
+## Arenas
+
+An arena is a layout in `arenas.gd`: a title and a list of cover pieces from
+Kenney's Modular Space Kit with a position and rotation. `ArenaBuilder`
+tiles the floor and rings the walls automatically from `ARENA_HALF_EXTENT`,
+then places the cover, giving every solid piece a `StaticBody3D` with box
+collision sized from its own mesh bounds. Pieces with an opening — the gates
+— declare their boxes instead. The navigation mesh bakes over the result.
+
+Everything is built at runtime, so a layout is a few lines of data and a
+second arena costs nothing but design. The chosen arena is a Match Setup
+option; the hub rebuilds when the choice changes at the start of a round.
+
+Layouts keep four promises the rest of the game relies on: corners clear for
+spawns, mid-edges clear for pickups, the two points at ±4 m on Z clear for
+the hill, and a block at the centre.
+
 ## Lighting
 
 Everything lives on the `WorldEnvironment` and the two lights in
@@ -256,11 +273,6 @@ cheap.
   caps at 1.0 and would never bloom.
 - **SSAO** for contact grounding, and **depth fog** (not volumetric) for
   distance falloff.
-
-Surfaces are PBR sets from ambientCG applied with world-space triplanar
-mapping (see `docs/ASSETS.md` for why). The floor is only partly metallic:
-a fully metallic surface has no diffuse term and turns into a dark mirror of
-whatever sky is above it.
 
 Both SSAO and glow are per-viewport costs and are the first things to measure
 on real hardware — see the framerate item in the roadmap.
