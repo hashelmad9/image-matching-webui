@@ -313,7 +313,7 @@ func _tick_feedback(delta: float) -> void:
 		_hit_flash = maxf(0.0, _hit_flash - delta)
 		_material.emission_enabled = true
 		_material.emission = Color.WHITE
-		_material.emission_energy_multiplier = 3.0
+		_material.emission_energy_multiplier = 3.0 * Settings.hit_flash
 	elif protection > 0.0:
 		var blink := 0.5 + 0.5 * sin(protection * 24.0)
 		_material.emission_enabled = true

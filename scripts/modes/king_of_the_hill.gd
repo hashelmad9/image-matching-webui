@@ -21,7 +21,7 @@ func blurb() -> String:
 
 
 func round_seconds() -> float:
-	return Config.KOTH_SECONDS
+	return Settings.match_round_seconds
 
 
 func begin() -> void:

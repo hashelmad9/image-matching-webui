@@ -26,6 +26,8 @@ cannon. In deathmatch, killing whoever is ahead is worth double.
 
 ![Results screen with the mutator ballot](docs/results.png)
 
+![Options menu over a paused round](docs/options.png)
+
 ## Status
 
 Early, but every mode above is playable end to end, and the screenshot is a
@@ -50,6 +52,15 @@ import pipeline.
 | Start the round (lobby) | `Start` | `Enter` |
 | Change next mode (lobby) | D-pad ◄ ► | `Tab` |
 | Vote on the next mutator (results) | `X` / `Y` / `B` | `1` / `2` / `3` |
+| Pause | `Start` (in a round) or `Back` | `Esc` |
+| Menus | D-pad, `A` select, `B` back | Arrows, `Enter`, `Esc` |
+
+The game opens on a main menu — Play, Options, Match Setup, Quit. Options
+covers volume, camera distance/height/field of view, invert aim, stick
+deadzone, screen shake, hit flash, window mode and v-sync, and is saved to
+`user://settings.cfg`. Match Setup sets round length, the deathmatch kill
+target, horde's starting wave, and whether mutator votes happen at all.
+Everything is navigable with a pad; nobody on a couch has a mouse.
 
 Up to four gamepads are supported, plus one keyboard seat. The keyboard seat
 exists so the game can be launched and checked without controllers attached;
@@ -77,11 +88,13 @@ plus a `.pck` data file.
 # Headless test suite: geometry, input maths, and the join/spawn/score path.
 godot --headless --path . --script res://tests/run_tests.gd
 
-# Re-render docs/split-screen.png (horde) and docs/results.png (results screen).
+# Re-render docs/split-screen.png (horde), docs/results.png and docs/options.png.
 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
     xvfb-run godot --path . --script res://tests/screenshot.gd
 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
     xvfb-run godot --path . --script res://tests/screenshot_results.gd
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    xvfb-run godot --path . --script res://tests/screenshot_options.gd
 ```
 
 The screenshot script is how this project checks that rendering actually works

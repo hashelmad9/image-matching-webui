@@ -58,7 +58,7 @@ func add_view(player: Player) -> void:
 	view.container.add_child(view.viewport)
 
 	view.camera = Camera3D.new()
-	view.camera.fov = Config.CAMERA_FOV
+	view.camera.fov = Settings.camera_fov
 	view.camera.current = true
 	view.viewport.add_child(view.camera)
 	_place_camera(view, 1.0)
@@ -99,14 +99,14 @@ func clear_toasts() -> void:
 
 func shake_all(amount: float) -> void:
 	for view in _views:
-		view.shake = maxf(view.shake, amount)
+		view.shake = maxf(view.shake, amount * Settings.screen_shake)
 
 
 ## Kicks one player's camera. Amplitudes do not stack; the bigger one wins.
 func shake(player: Player, amount: float) -> void:
 	var view := view_for(player)
 	if view != null:
-		view.shake = maxf(view.shake, amount)
+		view.shake = maxf(view.shake, amount * Settings.screen_shake)
 
 
 ## Slot layout for `count` players. Slot 0 is top-left and slots fill left to
@@ -151,8 +151,10 @@ func _place_camera(view: View, blend: float) -> void:
 	var player := view.player
 	var basis := Basis(Vector3.UP, player.yaw)
 	var eye: Vector3 = player.global_position + basis * Vector3(
-		0.0, Config.CAMERA_HEIGHT, Config.CAMERA_DISTANCE
+		0.0, Settings.camera_height, Settings.camera_distance
 	)
+	if not is_equal_approx(view.camera.fov, Settings.camera_fov):
+		view.camera.fov = Settings.camera_fov
 	var focus: Vector3 = (
 		player.global_position
 		+ basis * Vector3.FORWARD * Config.CAMERA_LOOK_AHEAD

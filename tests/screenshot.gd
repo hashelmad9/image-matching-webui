@@ -18,6 +18,7 @@ func _run() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 
 	for device in [Config.KEYBOARD_DEVICE, 0, 1, 2]:
 		main._try_join(device)

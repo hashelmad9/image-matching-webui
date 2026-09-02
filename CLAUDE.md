@@ -59,6 +59,17 @@ rest. Explanations go in `docs/`, not the scene file.
 which rewrites only the geometry in `scenes/arena.tscn` and keeps the
 hand-tuned environment, materials and lights.
 
+**Player-facing settings are `Settings`, not `Config`.** Camera offsets,
+deadzone, volumes, shake — anything a player can change — is read live from
+`scripts/settings.gd`, with `Config` supplying the defaults. Reading a
+`Config` camera constant directly in a system is a bug: the options menu will
+not affect it.
+
+**Menus run while the tree is paused; the hub does not.** Anything that must
+respond during a pause goes under the `Menus` layer or is explicitly set to
+`PROCESS_MODE_ALWAYS`. Do not make the hub always-process: its children
+inherit that and the round would keep running.
+
 **Tuning values live in `scripts/config.gd`.** Balance and feel changes belong
 there, not scattered through behaviour scripts.
 

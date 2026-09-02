@@ -13,11 +13,11 @@ func title() -> String:
 
 
 func blurb() -> String:
-	return "Every kill is a point. First to %d." % Config.DEATHMATCH_KILL_TARGET
+	return "Every kill is a point. First to %d." % Settings.match_kill_target
 
 
 func round_seconds() -> float:
-	return Config.DEATHMATCH_SECONDS
+	return Settings.match_round_seconds
 
 
 ## The outright score leader, or null when tied or nobody has scored.
@@ -47,7 +47,7 @@ func on_player_died(victim: Player, killer: Node) -> void:
 
 func is_over() -> bool:
 	for player in players():
-		if player.score >= Config.DEATHMATCH_KILL_TARGET:
+		if player.score >= Settings.match_kill_target:
 			return true
 	return false
 
@@ -78,6 +78,6 @@ func status_line() -> String:
 	var target := bounty_target()
 	if target != null:
 		return "FIRST TO %d  ·  BOUNTY ON P%d (worth %d)" % [
-			Config.DEATHMATCH_KILL_TARGET, target.index + 1, Config.BOUNTY_POINTS
+			Settings.match_kill_target, target.index + 1, Config.BOUNTY_POINTS
 		]
-	return "FIRST TO %d" % Config.DEATHMATCH_KILL_TARGET
+	return "FIRST TO %d" % Settings.match_kill_target

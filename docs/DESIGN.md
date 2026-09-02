@@ -86,6 +86,30 @@ Three surfaces, by scope.
   plain `Label` is one colour.
 - **The full-screen lobby title** only while nobody has joined.
 
+## Menus, pause and settings
+
+`Menu` is one widget: a titled panel of rows built from a list of
+dictionaries — action, toggle, choice, slider — with a highlighted row and
+D-pad/keyboard navigation. The main menu, pause menu, options and match setup
+are four lists handed to it from `game.gd`; there is no menu scene.
+
+Pausing is the architectural decision. The pause menu must keep taking input
+while the round is frozen, so menus live in a `CanvasLayer` set to
+`PROCESS_MODE_ALWAYS` and handle their own input, calling back into the hub.
+The hub itself stays pausable with the rest of the tree, which is what
+freezes the round: opening any menu outside the main menu sets
+`get_tree().paused`, closing the last one clears it. The main menu never
+pauses, since at launch there is nothing to pause. `Sfx` is also
+always-processing so menu sounds play through a pause.
+
+`Settings` is a static class. Systems read its values live — the camera rig
+reads distance, height and field of view every frame, input reads the
+deadzone and invert flag on every poll, shake and hit flash multiply by it —
+so an option takes effect the moment it changes and nothing has to be told.
+Defaults come from `Config`, which keeps the constants there as the tuning
+baseline. Values are clamped on load so a hand-edited file cannot put the
+camera inside the floor.
+
 ## Sudden death
 
 A versus round that runs out of clock while tied does not end in a draw. The

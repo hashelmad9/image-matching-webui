@@ -20,7 +20,7 @@ func blurb() -> String:
 
 
 func round_seconds() -> float:
-	return Config.BALL_SECONDS
+	return Settings.match_round_seconds
 
 
 func friendly_fire() -> bool:

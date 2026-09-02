@@ -34,10 +34,10 @@ static func read(device: int) -> PlayerInput:
 		Input.get_joy_axis(device, JOY_AXIS_LEFT_X),
 		-Input.get_joy_axis(device, JOY_AXIS_LEFT_Y),
 	))
-	input.aim_axis = _deadzone(Vector2(
-		Input.get_joy_axis(device, JOY_AXIS_RIGHT_X),
-		-Input.get_joy_axis(device, JOY_AXIS_RIGHT_Y),
-	))
+	var aim_y := -Input.get_joy_axis(device, JOY_AXIS_RIGHT_Y)
+	if Settings.invert_aim_y:
+		aim_y = -aim_y
+	input.aim_axis = _deadzone(Vector2(Input.get_joy_axis(device, JOY_AXIS_RIGHT_X), aim_y))
 	input.firing = (
 		Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > Config.TRIGGER_THRESHOLD
 		or Input.is_joy_button_pressed(device, JOY_BUTTON_RIGHT_SHOULDER)
@@ -53,12 +53,11 @@ static func _key_axis(negative: Key, positive: Key) -> float:
 ## Rescales past the deadzone, so crossing the threshold ramps smoothly from
 ## zero instead of jumping straight to STICK_DEADZONE.
 static func _deadzone(raw: Vector2) -> Vector2:
+	var deadzone := Settings.stick_deadzone
 	var length := raw.length()
-	if length < Config.STICK_DEADZONE:
+	if length < deadzone:
 		return Vector2.ZERO
-	var scaled := clampf(
-		(length - Config.STICK_DEADZONE) / (1.0 - Config.STICK_DEADZONE), 0.0, 1.0
-	)
+	var scaled := clampf((length - deadzone) / (1.0 - deadzone), 0.0, 1.0)
 	return raw / length * scaled
 
 

@@ -38,7 +38,8 @@ func friendly_fire() -> bool:
 
 
 func begin() -> void:
-	wave = 0
+	# Starting later skips the warm-up waves for people who have played before.
+	wave = Settings.match_horde_start_wave - 1
 	_breather = Config.HORDE_FIRST_WAVE_DELAY
 
 

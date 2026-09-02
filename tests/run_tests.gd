@@ -37,6 +37,9 @@ func _run() -> void:
 	print("\n== navigation, boss, weapons, audio, sky ==")
 	await _test_systems()
 
+	print("\n== menus and settings ==")
+	await _test_menus()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -160,6 +163,7 @@ func _test_join_and_spawn() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 
 	var players_root: Node3D = main.get_node("World/Players")
 	var split: SplitScreen = main.get_node("Screens/SplitScreen")
@@ -256,6 +260,7 @@ func _test_modes() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 	main._try_join(Config.KEYBOARD_DEVICE)
 	main._try_join(0)
 	await process_frame
@@ -299,6 +304,10 @@ func _test_modes() -> void:
 	await process_frame
 	_check(second.is_downed and second.visible, "horde: a dead player is downed, not hidden")
 	_check(main.state() == main.State.PLAYING, "horde: one player down does not end the round")
+	# Enemies path to the pair now, so clear them or the reviver goes down too.
+	for node in get_nodes_in_group("enemies"):
+		node.queue_free()
+	await process_frame
 	first.global_position = second.global_position + Vector3(1.0, 0.0, 0.0)
 	await _wait_physics(int((Config.REVIVE_SECONDS + 0.5) * 60))
 	_check(not second.is_downed and second.health == Config.PLAYER_MAX_HEALTH, "horde: a teammate nearby revives the downed player")
@@ -389,6 +398,7 @@ func _test_feel() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 	main._try_join(Config.KEYBOARD_DEVICE)
 	main._try_join(0)
 	await process_frame
@@ -543,6 +553,7 @@ func _test_ui() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 	var banner: Node = main.get_node("Banner")
 	_check(not banner.get_node("LobbyPanel").visible, "ui: no lobby panel before anyone joins")
 	main._try_join(Config.KEYBOARD_DEVICE)
@@ -668,6 +679,7 @@ func _test_systems() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	main.play()
 	main._try_join(Config.KEYBOARD_DEVICE)
 	main._try_join(0)
 	await process_frame
@@ -797,3 +809,141 @@ func _test_systems() -> void:
 
 	main.queue_free()
 	await process_frame
+
+
+# --- menus and settings ---------------------------------------------------------
+
+func _test_menus() -> void:
+	# --- settings round trip -------------------------------------------------
+	var path := "user://settings_test.cfg"
+	Settings.reset_defaults()
+	Settings.camera_fov = 80.0
+	Settings.invert_aim_y = true
+	Settings.stick_deadzone = 0.3
+	Settings.window_mode = "borderless"
+	Settings.match_kill_target = 7
+	_check(Settings.save(path), "settings: save writes a file")
+	Settings.reset_defaults()
+	_check(Settings.camera_fov == Config.CAMERA_FOV and not Settings.invert_aim_y, "settings: reset restores defaults")
+	_check(Settings.load_from_disk(path), "settings: load reads it back")
+	_check(Settings.camera_fov == 80.0 and Settings.invert_aim_y and Settings.stick_deadzone == 0.3
+		and Settings.window_mode == "borderless" and Settings.match_kill_target == 7,
+		"settings: every value survives the round trip")
+	_check(not Settings.load_from_disk("user://does_not_exist.cfg"), "settings: a missing file is reported, not fatal")
+	Settings.reset_defaults()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+	# --- settings reach the systems ----------------------------------------------
+	Settings.stick_deadzone = 0.5
+	_check(PlayerInput._deadzone(Vector2(0.4, 0.0)) == Vector2.ZERO, "settings: the deadzone is live in input")
+	Settings.reset_defaults()
+
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	_check(main.state() == main.State.MAIN_MENU, "menu: the game opens on the main menu")
+	_check(main.menus_open() == 1, "menu: one menu is open at launch")
+	var menu: Menu = main._menus[0]
+	_check(menu.title == "COUCH ARENA" and not menu.closable, "menu: the main menu cannot be backed out of")
+	menu.back()
+	_check(main.menus_open() == 1, "menu: back does nothing on the main menu")
+	menu.select("options")
+	menu.activate()
+	_check(main.menus_open() == 2 and main._menus.back().title == "OPTIONS", "menu: OPTIONS opens the options menu")
+	var options: Menu = main._menus.back()
+	options.select("fov")
+	var fov_before := Settings.camera_fov
+	options.adjust(1)
+	_check(Settings.camera_fov == fov_before + 5.0, "options: a slider changes the setting")
+	_check(options.value_of("fov") == "%d°" % int(Settings.camera_fov), "options: and shows the formatted value")
+	options.select("invert")
+	options.activate()
+	_check(Settings.invert_aim_y, "options: a toggle flips")
+	options.select("window")
+	options.adjust(1)
+	_check(Settings.window_mode == "borderless", "options: a choice steps to the next value")
+	options.adjust(-1)
+	options.select("defaults")
+	options.activate()
+	_check(Settings.camera_fov == Config.CAMERA_FOV and not Settings.invert_aim_y, "options: reset to defaults")
+	options.back()
+	_check(main.menus_open() == 1, "menu: back closes the options menu")
+	_check(not paused, "menu: the main menu never pauses the tree")
+
+	menu.select("play")
+	menu.activate()
+	_check(main.state() == main.State.LOBBY and main.menus_open() == 0, "menu: PLAY goes to the lobby")
+
+	# --- pause during a round ------------------------------------------------------
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	await process_frame
+	var first: Player = main.players()[0]
+	main.start_round("deathmatch", true)
+	await process_frame
+	main.open_pause_menu()
+	_check(paused and main.menus_open() == 1, "pause: opening the pause menu pauses the tree")
+	var pause: Menu = main._menus.back()
+	_check(pause.title == "PAUSED", "pause: it is titled PAUSED during a round")
+	var timer_before: float = main._timer
+	await process_frame
+	await process_frame
+	_check(is_equal_approx(main._timer, timer_before), "pause: the round clock stops")
+	var before := first.global_position
+	first.velocity = Vector3(5, 0, 0)
+	await physics_frame
+	_check(first.global_position.is_equal_approx(before), "pause: players freeze")
+	pause.select("options")
+	pause.activate()
+	_check(main.menus_open() == 2 and paused, "pause: options opens on top and stays paused")
+	main._menus.back().back()
+	pause.select("resume")
+	pause.activate()
+	_check(not paused and main.menus_open() == 0, "pause: resume unpauses")
+	_check(main.state() == main.State.PLAYING, "pause: the round continues")
+
+	# --- pause via input, quit to lobby ------------------------------------------
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	main._unhandled_input(escape)
+	_check(paused and main.menus_open() == 1, "pause: Escape opens the pause menu")
+	main._menus.back().select("lobby")
+	main._menus.back().activate()
+	_check(main.state() == main.State.LOBBY and not paused, "pause: QUIT TO LOBBY returns to the lobby, unpaused")
+	await process_frame
+	_check(get_nodes_in_group("pickups").is_empty(), "pause: quitting clears the arena")
+
+	# --- match setup reaches the modes -------------------------------------------
+	main.open_match_menu()
+	var setup: Menu = main._menus.back()
+	setup.select("kills")
+	setup.adjust(2)
+	_check(Settings.match_kill_target == Config.DEATHMATCH_KILL_TARGET + 2, "match: kill target adjusts")
+	setup.select("mutators")
+	setup.activate()
+	_check(not Settings.match_mutators, "match: mutator votes can be turned off")
+	setup.back()
+	main.start_round("deathmatch", true)
+	await process_frame
+	first.score = Config.DEATHMATCH_KILL_TARGET
+	await process_frame
+	_check(main.state() == main.State.PLAYING, "match: the old target no longer ends the round")
+	first.score = Settings.match_kill_target
+	await process_frame
+	_check(main.state() == main.State.RESULTS, "match: the new target does")
+	_check(main._ballot.is_empty(), "match: no ballot when votes are off")
+	main.next_round()
+	_check(main.mutator() == Mutators.NONE, "match: and no mutator is applied")
+	Settings.reset_defaults()
+
+	# --- quit to main menu -------------------------------------------------------
+	main.open_pause_menu()
+	main._menus.back().select("main")
+	main._menus.back().activate()
+	_check(main.state() == main.State.MAIN_MENU and main.menus_open() == 1 and not paused,
+		"menu: QUIT TO MAIN MENU lands on the main menu")
+
+	main.queue_free()
+	await process_frame
+	paused = false

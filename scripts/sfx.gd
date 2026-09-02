@@ -85,7 +85,7 @@ func _play(name: String, pitch_jitter: float) -> void:
 	var player := _pool[_next]
 	_next = (_next + 1) % POOL_SIZE
 	player.stream = streams[randi() % streams.size()]
-	player.volume_db = float(VOLUME.get(name, 0.0))
+	player.volume_db = float(VOLUME.get(name, 0.0)) + linear_to_db(maxf(Settings.sfx_volume, 0.0001))
 	player.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
 	player.play()
 	_play_count += 1

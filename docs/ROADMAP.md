@@ -179,7 +179,9 @@ too late. All of this is CC0 and already located — see [ASSETS.md](ASSETS.md).
 
 ## M9 — Shipping
 
-- [ ] Main menu, pause, and a settings screen (volume, invert aim, window mode)
+- [x] Main menu, pause, options (volume, camera, invert aim, deadzone, shake,
+      hit flash, window mode, v-sync) and match setup — all pad-navigable,
+      persisted to `user://settings.cfg`
 - [ ] Windows export, tested on a machine that is not the dev machine
 - [ ] Icon and window branding
 - [ ] Choose a licence

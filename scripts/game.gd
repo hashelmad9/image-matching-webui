@@ -9,7 +9,7 @@
 ## rules of each round live in scripts/modes/; this file only drives them.
 extends Node
 
-enum State { LOBBY, COUNTDOWN, PLAYING, RESULTS }
+enum State { MAIN_MENU, LOBBY, COUNTDOWN, PLAYING, RESULTS }
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const PICKUP_SCRIPT := preload("res://scripts/pickup.gd")
@@ -46,10 +46,14 @@ const JOIN_BUTTONS: Array[int] = [JOY_BUTTON_A, JOY_BUTTON_START]
 @onready var _lobby_seats: RichTextLabel = $Banner/LobbyPanel/Rows/Seats
 @onready var _lobby_mode: Label = $Banner/LobbyPanel/Rows/Mode
 @onready var _lobby_blurb: Label = $Banner/LobbyPanel/Rows/Blurb
+@onready var _menu_layer: CanvasLayer = $Menus
 
 ## One entry per seat. Holds a device id, or null when the seat is free.
 var _seats: Array = []
-var _state := State.LOBBY
+var _state := State.MAIN_MENU
+## Open menus, top of the stack taking input. Any open menu pauses the tree
+## unless we are on the main menu, where there is nothing to pause.
+var _menus: Array[Menu] = []
 var _mode: GameMode = null
 var _rotation_index := 0
 var _timer := 0.0
@@ -75,15 +79,25 @@ func _ready() -> void:
 	_lobby_camera.look_at(Vector3.ZERO, Vector3.UP)
 	_sfx = Sfx.new()
 	_sfx.name = "Sfx"
+	# Menu sounds must play while the round is paused.
+	_sfx.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_sfx)
 	_navigation = NavigationBuilder.build(_world, $World/Arena)
+	Settings.load_from_disk()
+	Settings.apply_all()
 	_refresh_lobby()
+	open_main_menu()
 	_refresh_ui()
 
 
 # --- input -----------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Menus take input first (they run above and handle it themselves); by the
+	# time it reaches here no menu is open.
+	if _wants_pause(event):
+		open_pause_menu()
+		return
 	if event is InputEventJoypadButton:
 		var button := event as InputEventJoypadButton
 		if not button.pressed:
@@ -118,6 +132,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			var choice := Mutators.VOTE_KEYS.find(key.keycode)
 			if choice != -1:
 				vote(Config.KEYBOARD_DEVICE, choice)
+
+
+## Escape, the pad's Back button, or Start during a round.
+func _wants_pause(event: InputEvent) -> bool:
+	if _state == State.MAIN_MENU:
+		return false
+	if event is InputEventKey:
+		var key := event as InputEventKey
+		return key.pressed and not key.echo and key.keycode == KEY_ESCAPE
+	if event is InputEventJoypadButton:
+		var button := event as InputEventJoypadButton
+		if not button.pressed:
+			return false
+		if button.button_index == JOY_BUTTON_BACK:
+			return true
+		return button.button_index == JOY_BUTTON_START and _state != State.LOBBY and _seats.has(button.device)
+	return false
 
 
 func _cycle_mode(step: int) -> void:
@@ -254,7 +285,7 @@ func _end_round() -> void:
 		_session_wins[winner.index] = int(_session_wins.get(winner.index, 0)) + 1
 	for player in players():
 		player.controls_enabled = false
-	_ballot = Mutators.ballot()
+	_ballot = Mutators.ballot() if Settings.match_mutators else ([] as Array[String])
 	_votes.clear()
 	Sfx.play("bell")
 	_state = State.RESULTS
@@ -306,7 +337,7 @@ func next_round() -> void:
 	if players().is_empty():
 		_return_to_lobby()
 		return
-	_mutator = Mutators.tally(_votes, _ballot)
+	_mutator = Mutators.tally(_votes, _ballot) if not _ballot.is_empty() else Mutators.NONE
 	var count := Config.MODE_ROTATION.size()
 	_rotation_index = (_rotation_index + 1) % count
 	start_round(current_mode_id())
@@ -462,6 +493,155 @@ func _on_player_died(victim: Player, killer: Node) -> void:
 		toast(victim, "KILLED BY P%d" % ((killer as Player).index + 1), Config.player_color((killer as Player).index))
 
 
+# --- menus -----------------------------------------------------------------------
+
+func open_menu(menu: Menu) -> void:
+	menu.back_requested.connect(close_menu)
+	_menu_layer.add_child(menu)
+	_menus.append(menu)
+	if _state != State.MAIN_MENU:
+		get_tree().paused = true
+
+
+func close_menu() -> void:
+	if _menus.is_empty():
+		return
+	var menu: Menu = _menus.pop_back()
+	menu.queue_free()
+	Settings.save()
+	if _menus.is_empty() and _state != State.MAIN_MENU:
+		get_tree().paused = false
+
+
+func close_all_menus() -> void:
+	while not _menus.is_empty():
+		close_menu()
+
+
+func menus_open() -> int:
+	return _menus.size()
+
+
+func open_main_menu() -> void:
+	var rows: Array[Dictionary] = [
+		{"id": "play", "kind": "action", "label": "PLAY", "activate": play},
+		{"id": "options", "kind": "action", "label": "OPTIONS", "activate": open_options_menu},
+		{"id": "match", "kind": "action", "label": "MATCH SETUP", "activate": open_match_menu},
+		{"id": "quit", "kind": "action", "label": "QUIT", "activate": quit_game},
+	]
+	open_menu(Menu.new("COUCH ARENA", rows, false))
+
+
+## Leaves the main menu for the lobby.
+func play() -> void:
+	close_all_menus()
+	_state = State.LOBBY
+	_refresh_ui()
+
+
+func open_pause_menu() -> void:
+	var rows: Array[Dictionary] = [
+		{"id": "resume", "kind": "action", "label": "RESUME", "activate": close_menu},
+		{"id": "options", "kind": "action", "label": "OPTIONS", "activate": open_options_menu},
+		{"id": "match", "kind": "action", "label": "MATCH SETUP", "activate": open_match_menu},
+	]
+	if _state != State.LOBBY:
+		rows.append({"id": "lobby", "kind": "action", "label": "QUIT TO LOBBY", "activate": quit_to_lobby})
+	rows.append({"id": "main", "kind": "action", "label": "QUIT TO MAIN MENU", "activate": quit_to_main_menu})
+	open_menu(Menu.new("PAUSED" if _state != State.LOBBY else "LOBBY", rows))
+
+
+func open_options_menu() -> void:
+	var percent := func(v: float) -> String: return "%d%%" % int(round(v * 100.0))
+	var metres := func(v: float) -> String: return "%.1f m" % v
+	var degrees := func(v: float) -> String: return "%d°" % int(round(v))
+	var rows: Array[Dictionary] = [
+		{"id": "master", "kind": "slider", "label": "MASTER VOLUME", "min": 0.0, "max": 1.0, "step": 0.1,
+			"get": func() -> float: return Settings.master_volume,
+			"set": func(v: float) -> void: Settings.master_volume = v; Settings.apply_audio(), "format": percent},
+		{"id": "sfx", "kind": "slider", "label": "EFFECTS VOLUME", "min": 0.0, "max": 1.0, "step": 0.1,
+			"get": func() -> float: return Settings.sfx_volume,
+			"set": func(v: float) -> void: Settings.sfx_volume = v, "format": percent},
+		{"id": "distance", "kind": "slider", "label": "CAMERA DISTANCE", "min": 0.5, "max": 10.0, "step": 0.5,
+			"get": func() -> float: return Settings.camera_distance,
+			"set": func(v: float) -> void: Settings.camera_distance = v, "format": metres},
+		{"id": "height", "kind": "slider", "label": "CAMERA HEIGHT", "min": 0.5, "max": 10.0, "step": 0.5,
+			"get": func() -> float: return Settings.camera_height,
+			"set": func(v: float) -> void: Settings.camera_height = v, "format": metres},
+		{"id": "fov", "kind": "slider", "label": "FIELD OF VIEW", "min": 40.0, "max": 110.0, "step": 5.0,
+			"get": func() -> float: return Settings.camera_fov,
+			"set": func(v: float) -> void: Settings.camera_fov = v, "format": degrees},
+		{"id": "invert", "kind": "toggle", "label": "INVERT AIM Y",
+			"get": func() -> bool: return Settings.invert_aim_y,
+			"set": func(v: bool) -> void: Settings.invert_aim_y = v},
+		{"id": "deadzone", "kind": "slider", "label": "STICK DEADZONE", "min": 0.05, "max": 0.6, "step": 0.05,
+			"get": func() -> float: return Settings.stick_deadzone,
+			"set": func(v: float) -> void: Settings.stick_deadzone = v, "format": percent},
+		{"id": "shake", "kind": "slider", "label": "SCREEN SHAKE", "min": 0.0, "max": 1.0, "step": 0.25,
+			"get": func() -> float: return Settings.screen_shake,
+			"set": func(v: float) -> void: Settings.screen_shake = v, "format": percent},
+		{"id": "flash", "kind": "slider", "label": "HIT FLASH", "min": 0.0, "max": 1.0, "step": 0.25,
+			"get": func() -> float: return Settings.hit_flash,
+			"set": func(v: float) -> void: Settings.hit_flash = v, "format": percent},
+		{"id": "window", "kind": "choice", "label": "WINDOW", "values": Settings.WINDOW_MODES,
+			"get": func() -> String: return Settings.window_mode,
+			"set": func(v: String) -> void: Settings.window_mode = v; Settings.apply_window(),
+			"format": func(v: String) -> String: return v.to_upper()},
+		{"id": "vsync", "kind": "toggle", "label": "V-SYNC",
+			"get": func() -> bool: return Settings.vsync,
+			"set": func(v: bool) -> void: Settings.vsync = v; Settings.apply_window()},
+		{"id": "defaults", "kind": "action", "label": "RESET TO DEFAULTS",
+			"activate": func() -> void: Settings.reset_defaults(); Settings.apply_all(); _refresh_top_menu()},
+		{"id": "back", "kind": "action", "label": "BACK", "activate": close_menu},
+	]
+	open_menu(Menu.new("OPTIONS", rows))
+
+
+func open_match_menu() -> void:
+	var seconds := func(v: float) -> String: return GameMode.format_time(v)
+	var rows: Array[Dictionary] = [
+		{"id": "length", "kind": "slider", "label": "ROUND LENGTH", "min": 30.0, "max": 300.0, "step": 30.0,
+			"get": func() -> float: return Settings.match_round_seconds,
+			"set": func(v: float) -> void: Settings.match_round_seconds = v, "format": seconds},
+		{"id": "kills", "kind": "slider", "label": "DEATHMATCH KILL TARGET", "min": 3.0, "max": 30.0, "step": 1.0,
+			"get": func() -> float: return float(Settings.match_kill_target),
+			"set": func(v: float) -> void: Settings.match_kill_target = int(v),
+			"format": func(v: float) -> String: return str(int(v))},
+		{"id": "wave", "kind": "slider", "label": "HORDE STARTING WAVE", "min": 1.0, "max": 10.0, "step": 1.0,
+			"get": func() -> float: return float(Settings.match_horde_start_wave),
+			"set": func(v: float) -> void: Settings.match_horde_start_wave = int(v),
+			"format": func(v: float) -> String: return str(int(v))},
+		{"id": "mutators", "kind": "toggle", "label": "MUTATOR VOTES",
+			"get": func() -> bool: return Settings.match_mutators,
+			"set": func(v: bool) -> void: Settings.match_mutators = v},
+		{"id": "back", "kind": "action", "label": "BACK", "activate": close_menu},
+	]
+	open_menu(Menu.new("MATCH SETUP", rows))
+
+
+func _refresh_top_menu() -> void:
+	if not _menus.is_empty():
+		_menus.back().refresh()
+
+
+func quit_to_lobby() -> void:
+	close_all_menus()
+	_return_to_lobby()
+
+
+func quit_to_main_menu() -> void:
+	close_all_menus()
+	_return_to_lobby()
+	_state = State.MAIN_MENU
+	open_main_menu()
+	_refresh_ui()
+
+
+func quit_game() -> void:
+	Settings.save()
+	get_tree().quit()
+
+
 # --- presentation --------------------------------------------------------------
 
 ## The lobby prompt covers the window until somebody joins; after that the
@@ -492,8 +672,11 @@ func _refresh_ui() -> void:
 	_results.visible = _state == State.RESULTS
 	_lobby_panel.visible = _state == State.LOBBY and not players().is_empty()
 	_top_bar.visible = _state == State.PLAYING
+	_lobby_ui.visible = players().is_empty() and _state in [State.LOBBY, State.MAIN_MENU]
 
 	match _state:
+		State.MAIN_MENU:
+			pass
 		State.LOBBY:
 			_lobby_seats.text = _seats_text()
 			_lobby_mode.text = "◄   %s   ►" % mode_title
@@ -514,7 +697,8 @@ func _refresh_ui() -> void:
 			_results_headline.text = _headline
 			_results_standings.text = _standings_bbcode()
 			_results_next.text = "next up: %s" % _peek_next_title()
-			_results_vote.text = _ballot_bbcode()
+			_results_vote.text = _ballot_bbcode() if not _ballot.is_empty() else ""
+			$Banner/Results/Rows/VoteTitle.visible = not _ballot.is_empty()
 			_results_timer.text = "next round in %d" % int(ceil(_timer))
 
 	for player in players():
