@@ -12,7 +12,11 @@ const KEYBOARD_DEVICE := -1
 
 # --- arena ----------------------------------------------------------------
 ## The floor spans [-ARENA_HALF_EXTENT, +ARENA_HALF_EXTENT] on X and Z.
-const ARENA_HALF_EXTENT := 24.0
+## Sized for four players to keep running into each other: at 48m across the
+## arena was 27 body-lengths wide and the camera had to sit so far back to
+## show it that the player was a speck. Regenerate the scene after changing
+## this: python3 tools/generate_arena.py
+const ARENA_HALF_EXTENT := 16.0
 const WALL_HEIGHT := 3.0
 const WALL_THICKNESS := 1.0
 
@@ -41,15 +45,15 @@ const MUZZLE_FORWARD := 1.0
 const MUZZLE_HEIGHT := 1.0
 
 # --- camera ---------------------------------------------------------------
-const CAMERA_DISTANCE := 7.5
-const CAMERA_HEIGHT := 9.0
+const CAMERA_DISTANCE := 5.0
+const CAMERA_HEIGHT := 5.5
 ## How far ahead of the player the camera aims, in metres.
 const CAMERA_LOOK_AHEAD := 3.0
 ## Higher snaps the camera to the player faster. Units: 1/seconds.
 const CAMERA_FOLLOW_RATE := 9.0
-## Narrower than Godot's 75 default: it magnifies the character without
-## flattening the camera angle, which would fill the frame with empty sky.
-const CAMERA_FOV := 60.0
+## A little narrower than Godot's 75 default. With the camera this close the
+## character reads on its own; the field of view no longer has to do that job.
+const CAMERA_FOV := 65.0
 
 # --- physics layers -------------------------------------------------------
 ## Bit 1 in the inspector. Static arena geometry.
@@ -117,6 +121,8 @@ const HORDE_WAVE_BREATHER := 4.0
 ## Grace period before the first wave, so nobody is swarmed at the whistle.
 const HORDE_FIRST_WAVE_DELAY := 2.5
 const HORDE_SPAWN_INTERVAL := 0.5
+## Enemies try to appear at least this far from anyone still standing.
+const HORDE_SPAWN_CLEARANCE := 5.0
 const ENEMY_HEALTH := 36
 const ENEMY_SPEED := 3.6
 ## Added to enemy speed every wave, so later waves close distance faster.

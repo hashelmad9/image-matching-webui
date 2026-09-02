@@ -54,6 +54,11 @@ Grep that for real class names, method signatures and enum values.
 node's properties at the first `#` line and silently keeps defaults for the
 rest. Explanations go in `docs/`, not the scene file.
 
+**The arena is generated.** Its size is `ARENA_HALF_EXTENT` in
+`scripts/config.gd`; after changing it run `python3 tools/generate_arena.py`,
+which rewrites only the geometry in `scenes/arena.tscn` and keeps the
+hand-tuned environment, materials and lights.
+
 **Tuning values live in `scripts/config.gd`.** Balance and feel changes belong
 there, not scattered through behaviour scripts.
 

@@ -107,7 +107,7 @@ func _spawn_point() -> Vector3:
 	var edge := Config.ARENA_HALF_EXTENT - 2.0
 	var best := Vector3.ZERO
 	var best_clearance := -1.0
-	for attempt in 6:
+	for attempt in 10:
 		var along := randf_range(-edge, edge)
 		var candidate: Vector3
 		match randi() % 4:
@@ -122,7 +122,7 @@ func _spawn_point() -> Vector3:
 		if clearance > best_clearance:
 			best_clearance = clearance
 			best = candidate
-		if clearance >= 8.0:
+		if clearance >= Config.HORDE_SPAWN_CLEARANCE:
 			break
 	return best
 

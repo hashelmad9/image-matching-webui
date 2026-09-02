@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/sky/belfast_sunset_puresky_1k.hdr" id="tex_sky"]
 [ext_resource type="Texture2D" path="res://assets/materials/MetalPlates008/Color.jpg" id="tex_floor_color"]
@@ -98,24 +98,24 @@ texture_filter = 5
 
 [sub_resource type="BoxMesh" id="Mesh_Box_0"]
 material = SubResource("Material_floor")
-size = Vector3(48.0, 0.5, 48.0)
+size = Vector3(32.0, 0.5, 32.0)
 
 [sub_resource type="BoxShape3D" id="Shape_Box_0"]
-size = Vector3(48.0, 0.5, 48.0)
+size = Vector3(32.0, 0.5, 32.0)
 
 [sub_resource type="BoxMesh" id="Mesh_Box_1"]
 material = SubResource("Material_wall")
-size = Vector3(50.0, 3.0, 1.0)
+size = Vector3(34.0, 3.0, 1.0)
 
 [sub_resource type="BoxShape3D" id="Shape_Box_1"]
-size = Vector3(50.0, 3.0, 1.0)
+size = Vector3(34.0, 3.0, 1.0)
 
 [sub_resource type="BoxMesh" id="Mesh_Box_2"]
 material = SubResource("Material_wall")
-size = Vector3(1.0, 3.0, 50.0)
+size = Vector3(1.0, 3.0, 34.0)
 
 [sub_resource type="BoxShape3D" id="Shape_Box_2"]
-size = Vector3(1.0, 3.0, 50.0)
+size = Vector3(1.0, 3.0, 34.0)
 
 [sub_resource type="BoxMesh" id="Mesh_Box_3"]
 material = SubResource("Material_cover")
@@ -126,17 +126,17 @@ size = Vector3(5.0, 3.0, 5.0)
 
 [sub_resource type="BoxMesh" id="Mesh_Box_4"]
 material = SubResource("Material_cover")
-size = Vector3(2.4, 2.4, 7.0)
+size = Vector3(2.4, 2.4, 6.0)
 
 [sub_resource type="BoxShape3D" id="Shape_Box_4"]
-size = Vector3(2.4, 2.4, 7.0)
+size = Vector3(2.4, 2.4, 6.0)
 
 [sub_resource type="BoxMesh" id="Mesh_Box_5"]
 material = SubResource("Material_cover")
-size = Vector3(7.0, 2.4, 2.4)
+size = Vector3(6.0, 2.4, 2.4)
 
 [sub_resource type="BoxShape3D" id="Shape_Box_5"]
-size = Vector3(7.0, 2.4, 2.4)
+size = Vector3(6.0, 2.4, 2.4)
 
 [node name="Arena" type="Node3D"]
 
@@ -180,7 +180,7 @@ mesh = SubResource("Mesh_Box_0")
 shape = SubResource("Shape_Box_0")
 
 [node name="WallNorth" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.5, -24.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.5, -16.5)
 collision_layer = 1
 collision_mask = 0
 
@@ -191,7 +191,7 @@ mesh = SubResource("Mesh_Box_1")
 shape = SubResource("Shape_Box_1")
 
 [node name="WallSouth" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.5, 24.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.5, 16.5)
 collision_layer = 1
 collision_mask = 0
 
@@ -202,7 +202,7 @@ mesh = SubResource("Mesh_Box_1")
 shape = SubResource("Shape_Box_1")
 
 [node name="WallWest" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.5, 1.5, 0.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 1.5, 0.0)
 collision_layer = 1
 collision_mask = 0
 
@@ -213,7 +213,7 @@ mesh = SubResource("Mesh_Box_2")
 shape = SubResource("Shape_Box_2")
 
 [node name="WallEast" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.5, 1.5, 0.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 1.5, 0.0)
 collision_layer = 1
 collision_mask = 0
 
@@ -235,7 +235,7 @@ mesh = SubResource("Mesh_Box_3")
 shape = SubResource("Shape_Box_3")
 
 [node name="CoverWest" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.0, 1.2, -4.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.72, 1.2, -2.72)
 collision_layer = 1
 collision_mask = 0
 
@@ -246,7 +246,7 @@ mesh = SubResource("Mesh_Box_4")
 shape = SubResource("Shape_Box_4")
 
 [node name="CoverEast" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.0, 1.2, 4.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.72, 1.2, 2.72)
 collision_layer = 1
 collision_mask = 0
 
@@ -257,7 +257,7 @@ mesh = SubResource("Mesh_Box_4")
 shape = SubResource("Shape_Box_4")
 
 [node name="CoverNorth" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.0, 1.2, -11.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.72, 1.2, -7.36)
 collision_layer = 1
 collision_mask = 0
 
@@ -268,7 +268,7 @@ mesh = SubResource("Mesh_Box_5")
 shape = SubResource("Shape_Box_5")
 
 [node name="CoverSouth" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 1.2, 11.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.72, 1.2, 7.36)
 collision_layer = 1
 collision_mask = 0
 
@@ -277,4 +277,3 @@ mesh = SubResource("Mesh_Box_5")
 
 [node name="Collision" type="CollisionShape3D" parent="CoverSouth"]
 shape = SubResource("Shape_Box_5")
-

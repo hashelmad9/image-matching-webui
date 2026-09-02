@@ -41,7 +41,7 @@ script = ExtResource("1_game")
 [node name="Players" type="Node3D" parent="World"]
 
 [node name="LobbyCamera" type="Camera3D" parent="World"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 26, 34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 18, 24)
 
 [node name="Screens" type="CanvasLayer" parent="."]
 

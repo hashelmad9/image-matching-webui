@@ -276,7 +276,7 @@ func _test_modes() -> void:
 	for attempt in 12:
 		var candidate: Vector3 = main._mode._spawn_point()
 		for player in players:
-			if candidate.distance_to(player.global_position) < 6.0:
+			if candidate.distance_to(player.global_position) < Config.HORDE_SPAWN_CLEARANCE:
 				spawn_far = false
 	_check(spawn_far, "horde: spawn points are chosen away from players")
 	var before := first.score
