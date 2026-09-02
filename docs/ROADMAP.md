@@ -188,6 +188,37 @@ too late. All of this is CC0 and already located — see [ASSETS.md](ASSETS.md).
 
 ---
 
+## What I would do next, in order
+
+Everything above that is unticked falls into two piles.
+
+**Needs a person and a machine** — nothing here can be done from a container:
+
+1. Play it with two controllers (M3). Every number in the game is a guess
+   until this happens. Watch the camera, the hit flash, wave-one pacing,
+   scatter range, and whether ricochet reads as skill or chaos.
+2. Look at the shadows (M3/M5). Never rendered by software Vulkan.
+3. Measure the four-way split's framerate with SSAO and glow on (M3).
+4. Windows export on a second machine (M9).
+
+**Can be built headlessly** — pick any:
+
+5. A third arena from the kit's corridor and room pieces: interior lanes and
+   rooms rather than open ground with cover, and stairs for the first
+   verticality. A genuinely different fight, and the first thing that would
+   make camera collision earn its keep.
+6. A minimap, now that the camera is close. Split screen hides nothing, so a
+   shared minimap costs nothing — and enemies now arrive from off-screen.
+7. Shoulder offset for the camera, so the player's own body is in frame.
+8. Aim and shoot animations from KayKit's animation pack (M4). The one visual
+   gap left that is asset-gated rather than skill-gated.
+9. Footsteps and music with a duck under gunfire (M8). Music needs a CC0
+   source; Kenney's "Music Jingles" covers stings but not a loop.
+10. Sudden-death variants — walls closing in, one shared weapon — and a
+    kill-cam or replay of the winning shot on the results screen.
+11. Weapon models in a hand bone rather than a fixed offset (M7b).
+12. Baked lighting (M7b), once the arenas are final.
+
 ## Quality bar
 
 A milestone is done when all of these hold:
