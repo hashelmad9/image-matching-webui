@@ -61,7 +61,11 @@ deathmatch. Each mode is a small rules class; see DESIGN.md.
 - [x] **Horde** (co-op): waves, zombie AI, downed state, proximity revive
 - [x] **Deathmatch**, **Tag**, **King of the Hill**, **Ball Game** (2v2)
 - [x] Friendly fire off in co-op; shots pass through teammates
-- [x] 93 headless checks across the flow and every mode
+- [x] Per-player HUD: health bar, mode status, event toasts, state banner
+- [x] Lobby panel with seats and mode carousel; countdown; results panel with
+      standings and the mutator ballot
+- [x] Every mode announces its moments: kill feed, bounty, tag hand-offs,
+      hill changes, goals, wave calls, down and revive
 
 ---
 
@@ -134,7 +138,7 @@ material half is not.
 - [x] Mutator vote between rounds: one-hit kills, infinite ricochet, fast
       feet, rapid fire, glass cannon — three on each ballot, X/Y/B to vote
 - [x] Ricochet as a signature mechanic: every shot bounces off cover once
-- [ ] Sudden death on a tie: walls close in, or one shared weapon spawns
+- [x] Sudden death on a tie: the versus modes play on until the next point
 
 ---
 

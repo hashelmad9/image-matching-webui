@@ -16,12 +16,14 @@ Plug in a pad, press A, press Start.
 | **King of the Hill** | 2–4 | Hold the centre alone for thirty seconds. |
 | **Ball Game** | 2v2 | Shoot or shove the ball into the other team's goal. |
 
-Every shot bounces off cover once, so bank shots are a thing. Between rounds
-everyone votes on a mutator for the next one — one-hit kills, infinite
-ricochet, fast feet, rapid fire, glass cannon. In deathmatch, killing whoever
-is ahead is worth double.
+Every shot bounces off cover once, so bank shots are a thing. A tie at the
+whistle goes to sudden death. Between rounds everyone votes on a mutator for
+the next one — one-hit kills, infinite ricochet, fast feet, rapid fire, glass
+cannon. In deathmatch, killing whoever is ahead is worth double.
 
 ![Four-player split screen](docs/split-screen.png)
+
+![Results screen with the mutator ballot](docs/results.png)
 
 ## Status
 
@@ -74,9 +76,11 @@ plus a `.pck` data file.
 # Headless test suite: geometry, input maths, and the join/spawn/score path.
 godot --headless --path . --script res://tests/run_tests.gd
 
-# Re-render docs/split-screen.png from a live four-player match.
+# Re-render docs/split-screen.png (horde) and docs/results.png (results screen).
 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
     xvfb-run godot --path . --script res://tests/screenshot.gd
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    xvfb-run godot --path . --script res://tests/screenshot_results.gd
 ```
 
 The screenshot script is how this project checks that rendering actually works

@@ -1,6 +1,8 @@
 ## Free-for-all. Kills score, first to the target or most when time runs out.
 extends GameMode
 
+var _last_target: Player = null
+
 
 func mode_id() -> String:
 	return "deathmatch"
@@ -32,7 +34,15 @@ func on_player_died(victim: Player, killer: Node) -> void:
 	var bounty := victim == bounty_target()
 	victim.schedule_respawn(Config.RESPAWN_SECONDS)
 	if killer is Player and killer != victim:
-		(killer as Player).score += Config.BOUNTY_POINTS if bounty else 1
+		var points := Config.BOUNTY_POINTS if bounty else 1
+		(killer as Player).score += points
+		announce_kill(killer as Player, victim, points)
+		if bounty:
+			hub.toast_all("P%d COLLECTED THE BOUNTY" % ((killer as Player).index + 1), Config.player_color((killer as Player).index))
+	var new_target := bounty_target()
+	if new_target != null and new_target != _last_target:
+		hub.toast(new_target, "BOUNTY ON YOU", Color(1, 0.85, 0.3))
+	_last_target = new_target
 
 
 func is_over() -> bool:
@@ -55,10 +65,13 @@ func winners() -> Array[Player]:
 
 
 func hud_text(player: Player) -> String:
-	var line := "HP %d  KILLS %d" % [maxi(player.health, 0), player.score]
-	if player == bounty_target():
-		line += "  ·  BOUNTY ON YOU"
-	return line
+	return "HP %d  KILLS %d" % [maxi(player.health, 0), player.score]
+
+
+func banner_text(player: Player) -> String:
+	if not player.is_dead and player == bounty_target():
+		return "BOUNTY ON YOU"
+	return super.banner_text(player)
 
 
 func status_line() -> String:

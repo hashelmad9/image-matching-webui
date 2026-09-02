@@ -58,11 +58,14 @@ func tick(delta: float) -> void:
 			if player.is_downed:
 				player.revive_in_place()
 		_breather = Config.HORDE_WAVE_BREATHER
+		hub.toast_all("WAVE %d CLEARED" % wave, Color(0.6, 1, 0.6))
 	_tick_revives(delta)
 
 
 func _start_wave() -> void:
 	wave += 1
+	hub.toast_all("WAVE %d" % wave, Color(1, 0.6, 0.5))
+	hub.shake_all(Config.SHAKE_FIRE)
 	_to_spawn = Config.HORDE_BASE_ENEMIES + Config.HORDE_ENEMIES_PER_WAVE * (wave - 1)
 	_spawned_this_wave = 0
 	_spawn_timer = 0.0
@@ -127,6 +130,10 @@ func enemies_alive() -> int:
 func on_player_died(victim: Player, _killer: Node) -> void:
 	victim.set_downed()
 	_revive_progress[victim] = 0.0
+	var colour := Config.player_color(victim.index)
+	for other in players():
+		if other != victim:
+			hub.toast(other, "P%d IS DOWN  ·  go revive them" % (victim.index + 1), colour)
 
 
 func _tick_revives(delta: float) -> void:
@@ -143,6 +150,8 @@ func _tick_revives(delta: float) -> void:
 		if progress >= Config.REVIVE_SECONDS:
 			player.revive_in_place()
 			_revive_progress.erase(player)
+			hub.toast(player, "BACK UP", Color(0.6, 1, 0.6))
+			Effects.spark(hub.world(), player.global_position + Vector3.UP, Config.player_color(player.index))
 		else:
 			_revive_progress[player] = progress
 
@@ -159,12 +168,20 @@ func finish() -> String:
 
 
 func hud_text(player: Player) -> String:
+	return "WAVE %d  HP %d  KILLS %d" % [wave, maxi(player.health, 0), player.score]
+
+
+func banner_text(player: Player) -> String:
 	if player.is_downed:
 		var progress: float = _revive_progress.get(player, 0.0)
 		if progress > 0.0:
 			return "REVIVING  %d%%" % int(progress / Config.REVIVE_SECONDS * 100.0)
 		return "DOWN  ·  a friend can revive you"
-	return "WAVE %d  HP %d  KILLS %d" % [wave, maxi(player.health, 0), player.score]
+	return ""
+
+
+func supports_sudden_death() -> bool:
+	return false
 
 
 func status_line() -> String:

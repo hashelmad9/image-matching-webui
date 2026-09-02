@@ -69,6 +69,14 @@ func on_player_died(victim: Player, killer: Node) -> void:
 	victim.schedule_respawn(Config.RESPAWN_SECONDS)
 	if killer is Player and killer != victim:
 		(killer as Player).score += 1
+		announce_kill(killer as Player, victim, 1)
+
+
+## Kill feed for both parties, in the other player's colour.
+func announce_kill(killer: Player, victim: Player, points: int) -> void:
+	var bonus := "  +%d" % points if points > 1 else ""
+	hub.toast(killer, "KILLED P%d%s" % [victim.index + 1, bonus], Config.player_color(victim.index))
+	hub.toast(victim, "KILLED BY P%d" % (killer.index + 1), Config.player_color(killer.index))
 
 
 func on_player_joined(_player: Player) -> void:
@@ -83,6 +91,20 @@ func projectile_hit(_projectile: Projectile, _body: Node3D) -> bool:
 ## Per-player HUD line.
 func hud_text(player: Player) -> String:
 	return "HP %d  KILLS %d" % [maxi(player.health, 0), player.score]
+
+
+## The big line low in a player's view describing the state they are in.
+func banner_text(player: Player) -> String:
+	if player.is_downed:
+		return "DOWN"
+	if player.is_dead:
+		return "RESPAWN IN %d" % int(ceil(player.respawn_in()))
+	return ""
+
+
+## Whether a tie at the whistle should play on until the next point.
+func supports_sudden_death() -> bool:
+	return true
 
 
 ## Shared line across the top of the screen.

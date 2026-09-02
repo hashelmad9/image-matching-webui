@@ -53,7 +53,16 @@ func tick(delta: float) -> void:
 		if flat.length() <= Config.KOTH_RADIUS:
 			inside.append(player)
 
+	var previous := _holder
 	_holder = inside[0] if inside.size() == 1 else null
+	if _holder != null and _holder != previous:
+		var colour := Config.player_color(_holder.index)
+		hub.toast(_holder, "THE HILL IS YOURS", colour)
+		for other in players():
+			if other != _holder:
+				hub.toast(other, "P%d TOOK THE HILL" % (_holder.index + 1), colour)
+	elif _holder == null and previous != null and inside.size() > 1:
+		hub.toast_all("HILL CONTESTED", Color(1, 0.55, 0.4))
 	if _holder != null:
 		_held[_holder] = _held.get(_holder, 0.0) + delta
 		_holder.score = int(_held[_holder])
@@ -96,8 +105,13 @@ func winners() -> Array[Player]:
 
 
 func hud_text(player: Player) -> String:
-	var tag := "  ·  ON THE HILL" if player == _holder else ""
-	return "HILL %ds  HP %d%s" % [player.score, maxi(player.health, 0), tag]
+	return "HILL %ds  HP %d" % [player.score, maxi(player.health, 0)]
+
+
+func banner_text(player: Player) -> String:
+	if player == _holder:
+		return "HOLDING THE HILL"
+	return super.banner_text(player)
 
 
 func status_line() -> String:

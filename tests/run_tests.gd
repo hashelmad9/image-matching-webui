@@ -31,6 +31,9 @@ func _run() -> void:
 	print("\n== game feel ==")
 	await _test_feel()
 
+	print("\n== ui and mode moments ==")
+	await _test_ui()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -521,6 +524,131 @@ func _test_feel() -> void:
 	var horde_script := load("res://scripts/modes/horde.gd")
 	_check(horde_script.kind_for_spawn(1, 4) == "walker", "horde: wave one is all walkers")
 	_check(horde_script.kind_for_spawn(Config.HORDE_BRUTE_WAVE, Config.HORDE_BRUTE_EVERY) == "brute", "horde: brutes arrive on schedule")
+
+	main.queue_free()
+	await process_frame
+
+
+# --- ui and mode moments ------------------------------------------------------
+
+func _test_ui() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var banner: Node = main.get_node("Banner")
+	_check(not banner.get_node("LobbyPanel").visible, "ui: no lobby panel before anyone joins")
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	await process_frame
+	var first: Player = main.players()[0]
+	var second: Player = main.players()[1]
+	var split: SplitScreen = main.get_node("Screens/SplitScreen")
+	var hud_one: HUD = split.view_for(first).hud
+	var hud_two: HUD = split.view_for(second).hud
+
+	# --- lobby panel -------------------------------------------------------------
+	_check(banner.get_node("LobbyPanel").visible, "ui: lobby panel shows once someone has joined")
+	var seats: String = banner.get_node("LobbyPanel/Rows/Seats").text
+	_check("P1  ready" in seats and "P3  open" in seats, "ui: lobby lists ready and open seats")
+	_check("HORDE" in banner.get_node("LobbyPanel/Rows/Mode").text, "ui: lobby shows the next mode")
+	main._cycle_mode(1)
+	_check("DEATHMATCH" in banner.get_node("LobbyPanel/Rows/Mode").text, "ui: cycling changes the shown mode")
+	main._cycle_mode(-1)
+
+	# --- countdown -----------------------------------------------------------------
+	main.start_round("deathmatch")
+	await process_frame
+	_check(banner.get_node("Countdown").visible, "ui: countdown panel shows")
+	_check(banner.get_node("Countdown/Number").text == "3", "ui: countdown starts at 3")
+	_check(not banner.get_node("LobbyPanel").visible, "ui: lobby panel hides during the countdown")
+
+	# --- HUD panel -----------------------------------------------------------------
+	main.start_round("deathmatch", true)
+	await process_frame
+	await process_frame
+	_check(hud_two.health_ratio() > 0.99, "hud: health bar is full at the start")
+	second.take_damage(50, first)
+	await process_frame
+	_check(absf(hud_two.health_ratio() - 0.5) < 0.02, "hud: health bar tracks damage")
+	_check(hud_one.toast_count() >= 0, "hud: toast container exists")
+	second.take_damage(10_000, first)
+	await process_frame
+	_check(hud_one.toast_count() >= 1, "hud: the killer gets a kill toast")
+	_check(hud_two.toast_count() >= 1, "hud: the victim gets a death toast")
+	await process_frame
+	_check(second.hud_banner.begins_with("RESPAWN IN"), "hud: a dead player sees the respawn countdown")
+	_check(hud_two.get_node("Banner").text == second.hud_banner, "hud: the banner label shows it")
+	for i in 4:
+		hud_one.toast("x")
+	_check(hud_one.toast_count() <= HUD.MAX_TOASTS, "hud: toasts are capped")
+
+	# --- bounty banner ---------------------------------------------------------
+	first.score = 3
+	await process_frame
+	_check(first.hud_banner == "BOUNTY ON YOU", "deathmatch: the leader sees the bounty banner")
+
+	# --- sudden death ----------------------------------------------------------
+	main.start_round("deathmatch", true)
+	await process_frame
+	first.score = 2
+	second.score = 2
+	main._timer = 0.01
+	await process_frame
+	await process_frame
+	_check(main.state() == main.State.PLAYING and main.in_sudden_death(), "sudden death: a tie at the whistle plays on")
+	_check("SUDDEN DEATH" in banner.get_node("TopBar").text, "sudden death: the top bar says so")
+	second.take_damage(10_000, first)
+	await process_frame
+	await process_frame
+	_check(main.state() == main.State.RESULTS, "sudden death: the next point ends it")
+	_check(main._headline == "P1 WINS", "sudden death: and names the winner")
+
+	# --- results panel ---------------------------------------------------------
+	_check(banner.get_node("Results").visible, "ui: results panel shows")
+	var standings: String = banner.get_node("Results/Rows/Standings").text
+	_check("P1" in standings and "×1" in standings, "ui: standings list the session win")
+	var vote_text: String = banner.get_node("Results/Rows/Vote").text
+	_check("[X / 1]" in vote_text, "ui: ballot shows the vote buttons")
+	main.vote(0, 0)
+	main._refresh_ui()
+	_check("●" in banner.get_node("Results/Rows/Vote").text, "ui: a cast vote shows as a marker")
+
+	# --- horde: no sudden death, wave toasts ----------------------------------
+	main.start_round("horde", true)
+	await _wait_physics(int((Config.HORDE_FIRST_WAVE_DELAY + 0.3) * 60))
+	_check(hud_one.toast_count() >= 1, "horde: wave one is announced")
+	second.take_damage(10_000, null)
+	await process_frame
+	await process_frame
+	_check(second.hud_banner.begins_with("DOWN"), "horde: a downed player sees the down banner")
+
+	# --- tag moments -----------------------------------------------------------
+	main.start_round("tag", true)
+	await process_frame
+	await process_frame
+	var mode: GameMode = main._mode
+	var it: Player = first if mode.is_it(first) else second
+	_check(it.hud_banner.begins_with("YOU'RE IT"), "tag: it sees the banner")
+	_check(split.view_for(it).hud.toast_count() >= 1, "tag: it is told at the start")
+
+	# --- hill moments ----------------------------------------------------------
+	main.start_round("king_of_the_hill", true)
+	await process_frame
+	first.global_position = Vector3(0.0, Config.PLAYER_HEIGHT * 0.5, 4.0)
+	await _wait_physics(10)
+	_check(first.hud_banner == "HOLDING THE HILL", "hill: the holder sees the banner")
+	_check(hud_two.toast_count() >= 1, "hill: others are told who took it")
+
+	# --- ball moments ----------------------------------------------------------
+	main.start_round("ball_game", true)
+	await process_frame
+	var ball: RigidBody3D = main._mode._ball
+	_check(hud_two.toast_count() == 0, "ui: a new round clears the previous round's toasts")
+	var toasts_before := hud_two.toast_count()
+	ball.global_position = Vector3(Config.ARENA_HALF_EXTENT - 1.0, 1.0, 0.0)
+	await _wait_physics(3)
+	_check(hud_two.toast_count() > toasts_before, "ball: a goal is announced to everyone")
+	_check(split.view_for(second).shake > 0.0, "ball: a goal shakes every view")
 
 	main.queue_free()
 	await process_frame

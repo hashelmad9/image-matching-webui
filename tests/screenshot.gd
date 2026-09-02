@@ -25,9 +25,13 @@ func _run() -> void:
 	# Horde is the most representative frame: zombies closing in on four
 	# players. Skipping the countdown keeps the render deterministic.
 	main.start_round("horde", true)
-	for i in 240:
-		await physics_frame
-	for i in 10:
+	# Toasts and the wave timer run on wall-clock time, while physics frames
+	# can lag it badly under software rendering. Wait for the wave itself,
+	# then a fixed slice of real time, so the "WAVE 1" toast is in frame.
+	while main._mode.wave < 1:
+		await process_frame
+	var started := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - started < 900:
 		await process_frame
 
 	# Put a few tracers in flight so projectiles appear in the shot.

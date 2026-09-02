@@ -66,13 +66,22 @@ func tick(delta: float) -> void:
 
 
 func _set_it(player: Player) -> void:
-	if is_instance_valid(_it):
-		_it.speed_multiplier = 1.0
-		_it.highlight(false)
+	var previous := _it if is_instance_valid(_it) else null
+	if previous != null:
+		previous.speed_multiplier = 1.0
+		previous.highlight(false)
 	_it = player
 	_it.speed_multiplier = Config.TAG_IT_SPEED
 	_it.highlight(true)
 	_immunity = Config.TAG_IMMUNITY
+	var colour := Config.player_color(_it.index)
+	hub.toast(_it, "YOU'RE IT!", colour)
+	for other in players():
+		if other != _it:
+			hub.toast(other, "P%d IS IT" % (_it.index + 1), colour)
+	if previous != null:
+		hub.toast(previous, "TAGGED P%d" % (_it.index + 1), colour)
+	Effects.spark(hub.world(), _it.global_position + Vector3.UP, colour)
 
 
 func is_it(player: Player) -> bool:
@@ -92,9 +101,13 @@ func winners() -> Array[Player]:
 
 
 func hud_text(player: Player) -> String:
-	if player == _it:
-		return "YOU'RE IT  ·  catch someone!"
 	return "SAFE FOR %ds" % player.score
+
+
+func banner_text(player: Player) -> String:
+	if player == _it:
+		return "YOU'RE IT  ·  catch someone"
+	return super.banner_text(player)
 
 
 func status_line() -> String:

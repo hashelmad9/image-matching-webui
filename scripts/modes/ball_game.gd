@@ -36,6 +36,9 @@ func begin() -> void:
 	# the colour of the team that scores in it.
 	_props.append(_build_goal(1.0, Config.player_color(0)))
 	_props.append(_build_goal(-1.0, Config.player_color(1)))
+	for side in [1.0, -1.0]:
+		for z in [-Config.GOAL_HALF_WIDTH, Config.GOAL_HALF_WIDTH]:
+			_props.append(_build_post(side, z))
 	_reset_ball()
 
 
@@ -96,6 +99,22 @@ func _build_goal(side: float, colour: Color) -> MeshInstance3D:
 	return goal
 
 
+func _build_post(side: float, z: float) -> MeshInstance3D:
+	var post := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.5, 4.0, 0.5)
+	post.mesh = box
+	post.position = Vector3(side * (Config.ARENA_HALF_EXTENT - 2.0), 2.0, z)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.95, 0.95, 0.9)
+	material.emission_enabled = true
+	material.emission = Color(1, 1, 0.9)
+	material.emission_energy_multiplier = 0.8
+	post.material_override = material
+	hub.world().add_child(post)
+	return post
+
+
 func _reset_ball() -> void:
 	_ball.linear_velocity = Vector3.ZERO
 	_ball.angular_velocity = Vector3.ZERO
@@ -127,6 +146,10 @@ func _score(team: int) -> void:
 	_goals[team] += 1
 	for player in players():
 		player.score = _goals[Config.team_of(player.index)]
+	var colour := Config.player_color(team)
+	hub.toast_all("GOAL!  %s   %d - %d" % [_team_name(team), _goals[0], _goals[1]], colour)
+	hub.shake_all(Config.SHAKE_HURT)
+	Effects.spark(hub.world(), _ball.global_position, colour)
 	_reset_ball()
 
 
@@ -159,6 +182,17 @@ static func _team_name(team: int) -> String:
 func hud_text(player: Player) -> String:
 	var team := Config.team_of(player.index)
 	return "%s TEAM  ·  %d - %d" % [_team_name(team), _goals[team], _goals[1 - team]]
+
+
+func banner_text(player: Player) -> String:
+	var team := Config.team_of(player.index)
+	var teammates: PackedStringArray = []
+	for other in players():
+		if other != player and Config.team_of(other.index) == team:
+			teammates.append("P%d" % (other.index + 1))
+	if teammates.is_empty():
+		return ""
+	return "with %s" % " & ".join(teammates)
 
 
 func status_line() -> String:

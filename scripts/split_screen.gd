@@ -91,6 +91,17 @@ func view_for(player: Player) -> View:
 	return null
 
 
+func clear_toasts() -> void:
+	for view in _views:
+		if view.hud != null:
+			view.hud.clear_toasts()
+
+
+func shake_all(amount: float) -> void:
+	for view in _views:
+		view.shake = maxf(view.shake, amount)
+
+
 ## Kicks one player's camera. Amplitudes do not stack; the bigger one wins.
 func shake(player: Player, amount: float) -> void:
 	var view := view_for(player)

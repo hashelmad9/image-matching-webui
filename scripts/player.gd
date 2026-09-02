@@ -42,6 +42,8 @@ var mutator_fire_scale := 1.0
 var max_health := Config.PLAYER_MAX_HEALTH
 ## Mode-provided HUD line. Empty falls back to health and kills.
 var hud_status := ""
+## Mode-provided state banner low in the frame ("DOWN", "YOU'RE IT").
+var hud_banner := ""
 ## Seconds of spawn protection remaining.
 var protection := 0.0
 
@@ -167,6 +169,11 @@ func _play(animation: String) -> void:
 		_animation_player.play(animation)
 
 
+## Seconds until a scheduled respawn, or 0 when none is pending.
+func respawn_in() -> float:
+	return maxf(0.0, _respawn_countdown)
+
+
 ## The direction this player faces. A zero-yaw node faces -Z.
 func forward() -> Vector3:
 	return Basis(Vector3.UP, yaw) * Vector3.FORWARD
@@ -225,6 +232,7 @@ func reset_for_round() -> void:
 	_restore()
 	score = 0
 	hud_status = ""
+	hud_banner = ""
 	speed_multiplier = 1.0
 	mutator_speed = 1.0
 	mutator_fire_scale = 1.0

@@ -31,9 +31,20 @@ const JOIN_BUTTONS: Array[int] = [JOY_BUTTON_A, JOY_BUTTON_START]
 @onready var _lobby_mode_line: Label = $LobbyUI/Panel/ModeLine
 @onready var _lobby_camera: Camera3D = $World/LobbyCamera
 @onready var _top_bar: Label = $Banner/TopBar
-@onready var _centre: Control = $Banner/Centre
-@onready var _centre_title: Label = $Banner/Centre/Title
-@onready var _centre_subtitle: Label = $Banner/Centre/Subtitle
+@onready var _countdown: Control = $Banner/Countdown
+@onready var _countdown_title: Label = $Banner/Countdown/Title
+@onready var _countdown_number: Label = $Banner/Countdown/Number
+@onready var _countdown_blurb: Label = $Banner/Countdown/Blurb
+@onready var _results: Control = $Banner/Results
+@onready var _results_headline: Label = $Banner/Results/Rows/Headline
+@onready var _results_standings: RichTextLabel = $Banner/Results/Rows/Standings
+@onready var _results_next: Label = $Banner/Results/Rows/Next
+@onready var _results_vote: RichTextLabel = $Banner/Results/Rows/Vote
+@onready var _results_timer: Label = $Banner/Results/Rows/Timer
+@onready var _lobby_panel: Control = $Banner/LobbyPanel
+@onready var _lobby_seats: RichTextLabel = $Banner/LobbyPanel/Rows/Seats
+@onready var _lobby_mode: Label = $Banner/LobbyPanel/Rows/Mode
+@onready var _lobby_blurb: Label = $Banner/LobbyPanel/Rows/Blurb
 
 ## One entry per seat. Holds a device id, or null when the seat is free.
 var _seats: Array = []
@@ -48,6 +59,8 @@ var _session_wins: Dictionary = {}
 var _mutator := Mutators.NONE
 var _ballot: Array[String] = []
 var _votes: Dictionary = {}
+## Set when a versus round ran out of clock while tied; the next point wins.
+var _sudden_death := false
 
 
 func _ready() -> void:
@@ -205,6 +218,8 @@ func start_round(mode_id: String, skip_countdown := false) -> void:
 		player.controls_enabled = false
 		_apply_mutator_to(player)
 
+	_sudden_death = false
+	_split_screen.clear_toasts()
 	_state = State.COUNTDOWN
 	_timer = Config.COUNTDOWN_SECONDS
 	if skip_countdown:
@@ -230,6 +245,38 @@ func _end_round() -> void:
 	_votes.clear()
 	_state = State.RESULTS
 	_timer = Config.RESULTS_SECONDS
+
+
+## A tie at the whistle in a versus mode with real opposition goes to sudden
+## death rather than a draw; someone should walk away with the round.
+func _can_go_to_sudden_death() -> bool:
+	return (
+		not _sudden_death
+		and _mode.supports_sudden_death()
+		and _mode.winners().is_empty()
+		and players().size() >= 2
+	)
+
+
+func in_sudden_death() -> bool:
+	return _sudden_death
+
+
+## A short message in one player's view.
+func toast(player: Player, text: String, colour := Color.WHITE) -> void:
+	var view := _split_screen.view_for(player)
+	if view != null and view.hud != null:
+		view.hud.toast(text, colour)
+
+
+## The same message in everyone's view.
+func toast_all(text: String, colour := Color.WHITE) -> void:
+	for player in players():
+		toast(player, text, colour)
+
+
+func shake_all(amount: float) -> void:
+	_split_screen.shake_all(amount)
 
 
 ## Records a seat's vote for the next round's mutator.
@@ -297,8 +344,16 @@ func _process(delta: float) -> void:
 		State.PLAYING:
 			_mode.tick(delta)
 			_timer -= delta
-			if _timer <= 0.0 or _mode.is_over():
+			if _mode.is_over() or (_sudden_death and not _mode.winners().is_empty()):
 				_end_round()
+			elif _timer <= 0.0:
+				if _can_go_to_sudden_death():
+					_sudden_death = true
+					_timer = INF
+					toast_all("SUDDEN DEATH  ·  next point wins", Color(1, 0.85, 0.3))
+					_split_screen.shake_all(Config.SHAKE_HURT)
+				else:
+					_end_round()
 		State.RESULTS:
 			_timer -= delta
 			if _timer <= 0.0:
@@ -345,6 +400,8 @@ func _on_player_died(victim: Player, killer: Node) -> void:
 	victim.schedule_respawn(Config.RESPAWN_SECONDS)
 	if killer is Player and killer != victim and is_instance_valid(killer):
 		(killer as Player).score += 1
+		toast(killer, "KILLED P%d" % (victim.index + 1), Config.player_color(victim.index))
+		toast(victim, "KILLED BY P%d" % ((killer as Player).index + 1), Config.player_color((killer as Player).index))
 
 
 # --- presentation --------------------------------------------------------------
@@ -373,56 +430,82 @@ func _refresh_ui() -> void:
 		preview.free()
 
 	_lobby_mode_line.text = "Next up: %s   (◄ ► or TAB to change)" % mode_title
+	_countdown.visible = _state == State.COUNTDOWN
+	_results.visible = _state == State.RESULTS
+	_lobby_panel.visible = _state == State.LOBBY and not players().is_empty()
+	_top_bar.visible = _state == State.PLAYING
 
 	match _state:
 		State.LOBBY:
-			_centre.visible = false
-			_top_bar.visible = not players().is_empty()
-			_top_bar.text = "LOBBY  ·  NEXT: %s — %s  ·  ◄ ► change  ·  START to play" % [
-				mode_title, mode_blurb
-			]
+			_lobby_seats.text = _seats_text()
+			_lobby_mode.text = "◄   %s   ►" % mode_title
+			_lobby_blurb.text = mode_blurb
 		State.COUNTDOWN:
-			_top_bar.visible = false
-			_centre.visible = true
-			_centre_title.text = mode_title
-			_centre_subtitle.text = "%s\nstarting in %d" % [mode_blurb, int(ceil(_timer))]
+			_countdown_title.text = mode_title
+			_countdown_number.text = str(int(ceil(_timer)))
+			_countdown_blurb.text = mode_blurb
 		State.PLAYING:
-			_centre.visible = false
-			_top_bar.visible = true
-			var clock := "" if is_inf(_timer) else "  ·  " + GameMode.format_time(_timer)
+			var clock := ""
+			if _sudden_death:
+				clock = "  ·  SUDDEN DEATH"
+			elif not is_inf(_timer):
+				clock = "  ·  " + GameMode.format_time(_timer)
 			var twist := "" if _mutator == Mutators.NONE else "  ·  " + Mutators.title(_mutator)
 			_top_bar.text = "%s%s  ·  %s%s" % [mode_title, twist, _mode.status_line(), clock]
 		State.RESULTS:
-			_top_bar.visible = false
-			_centre.visible = true
-			_centre_title.text = _headline
-			_centre_subtitle.text = "%s\nnext: %s\n\n%s" % [
-				_standings(), _peek_next_title(), _ballot_text()
-			]
+			_results_headline.text = _headline
+			_results_standings.text = _standings_bbcode()
+			_results_next.text = "next up: %s" % _peek_next_title()
+			_results_vote.text = _ballot_bbcode()
+			_results_timer.text = "next round in %d" % int(ceil(_timer))
 
 	for player in players():
-		player.hud_status = _mode.hud_text(player) if _state == State.PLAYING else ""
+		if _state == State.PLAYING:
+			player.hud_status = _mode.hud_text(player)
+			player.hud_banner = _mode.banner_text(player)
+		else:
+			player.hud_status = ""
+			player.hud_banner = ""
 
 
-func _standings() -> String:
+static func _hex(colour: Color) -> String:
+	return colour.to_html(false)
+
+
+func _seats_text() -> String:
+	var parts: PackedStringArray = []
+	for seat in Config.MAX_PLAYERS:
+		var colour := _hex(Config.player_color(seat))
+		if _seats[seat] == null:
+			parts.append("[color=#666666]P%d  open[/color]" % (seat + 1))
+		else:
+			parts.append("[color=#%s]P%d  ready[/color]" % [colour, seat + 1])
+	return "[center]" + "      ".join(parts) + "[/center]"
+
+
+func _standings_bbcode() -> String:
 	var parts: PackedStringArray = []
 	for player in players():
-		parts.append("P%d ×%d" % [player.index + 1, int(_session_wins.get(player.index, 0))])
-	return "SESSION WINS   " + "   ".join(parts)
+		var wins := int(_session_wins.get(player.index, 0))
+		parts.append("[color=#%s]P%d[/color]  ×%d" % [
+			_hex(Config.player_color(player.index)), player.index + 1, wins
+		])
+	return "[center]SESSION WINS      " + "      ".join(parts) + "[/center]"
 
 
-func _ballot_text() -> String:
+func _ballot_bbcode() -> String:
 	var parts: PackedStringArray = []
 	for i in _ballot.size():
 		var count := 0
 		for choice in _votes.values():
 			if choice == _ballot[i]:
 				count += 1
-		var tally := "  (%d)" % count if count > 0 else ""
-		parts.append("[%s / %d]  %s%s" % [
+		var tally := "  [color=#ffd66b]●[/color]".repeat(count)
+		parts.append("[color=#9ec5ff][%s / %d][/color]  %s%s" % [
 			Mutators.VOTE_BUTTON_NAMES[i], i + 1, Mutators.title(_ballot[i]), tally
 		])
-	return "VOTE THE NEXT MUTATOR      " + "      ".join(parts)
+	# One option per line: three titles side by side wrap at panel width.
+	return "[center]" + "\n".join(parts) + "[/center]"
 
 
 func _peek_next_title() -> String:

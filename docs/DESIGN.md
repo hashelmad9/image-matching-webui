@@ -68,6 +68,33 @@ anything it crosses — and the physics space is locked outside physics
 callbacks. Be aware the ray sits nine metres up at the far end, so nothing in
 this arena is tall enough to trip it; it is there for taller geometry.
 
+## UI
+
+Three surfaces, by scope.
+
+- **Per-player HUD** (`hud.tscn`, inside each SubViewport, so it is clipped
+  to that player's slice): a corner panel with name, health bar and the
+  mode's status line; a stack of **toasts** near the centre for things that
+  just happened, capped at three and cleared when a round starts; and a
+  **banner** low in the frame for the state the player is in right now.
+  Modes supply the status line via `hud_text()` and the banner via
+  `banner_text()`; they push toasts through `hub.toast()` / `toast_all()`.
+- **Shared overlays** (`Banner` layer in `main.tscn`): the top bar during
+  play; the countdown; the results panel with headline, coloured session
+  standings and the mutator ballot; and a lobby panel with the seat list and
+  mode carousel. Coloured text uses `RichTextLabel` with BBCode, since a
+  plain `Label` is one colour.
+- **The full-screen lobby title** only while nobody has joined.
+
+## Sudden death
+
+A versus round that runs out of clock while tied does not end in a draw. The
+hub asks the mode for `winners()`; if none and the mode
+`supports_sudden_death()`, the clock stops and play continues until a unique
+leader exists. For deathmatch that is the next kill, for the ball game the
+next goal, for the hill the next uncontested second. Horde opts out — it has
+no clock and no tie.
+
 ## Ricochet
 
 Cover is handled by a ray along each frame's travel rather than by the

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://scenes/arena.tscn" id="2_arena"]
@@ -14,6 +14,22 @@ content_margin_left = 14.0
 content_margin_top = 4.0
 content_margin_right = 14.0
 content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.03, 0.04, 0.07, 0.86)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.12)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 28.0
+content_margin_top = 20.0
+content_margin_right = 28.0
+content_margin_bottom = 20.0
 
 [node name="Main" type="Node"]
 script = ExtResource("1_game")
@@ -81,20 +97,129 @@ horizontal_alignment = 1
 theme_override_styles/normal = SubResource("StyleBox_topbar")
 theme_override_font_sizes/font_size = 20
 
-[node name="Centre" type="VBoxContainer" parent="Banner"]
+[node name="Countdown" type="VBoxContainer" parent="Banner"]
+visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 alignment = 1
-theme_override_constants/separation = 12
+theme_override_constants/separation = 0
 
-[node name="Title" type="Label" parent="Banner/Centre"]
+[node name="Title" type="Label" parent="Banner/Countdown"]
+layout_mode = 2
 text = "HORDE"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 60
+theme_override_font_sizes/font_size = 54
 
-[node name="Subtitle" type="Label" parent="Banner/Centre"]
+[node name="Number" type="Label" parent="Banner/Countdown"]
+layout_mode = 2
+text = "3"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 150
+
+[node name="Blurb" type="Label" parent="Banner/Countdown"]
+layout_mode = 2
 text = ""
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
+
+[node name="Results" type="PanelContainer" parent="Banner"]
+visible = false
+custom_minimum_size = Vector2(780, 0)
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Banner/Results"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Headline" type="Label" parent="Banner/Results/Rows"]
+layout_mode = 2
+text = "P1 WINS"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 46
+
+[node name="Standings" type="RichTextLabel" parent="Banner/Results/Rows"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 22
+
+[node name="Next" type="Label" parent="Banner/Results/Rows"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+
+[node name="VoteTitle" type="Label" parent="Banner/Results/Rows"]
+layout_mode = 2
+text = "VOTE THE NEXT TWIST"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Vote" type="RichTextLabel" parent="Banner/Results/Rows"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 20
+
+[node name="Timer" type="Label" parent="Banner/Results/Rows"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="LobbyPanel" type="PanelContainer" parent="Banner"]
+visible = false
+custom_minimum_size = Vector2(640, 0)
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Banner/LobbyPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Seats" type="RichTextLabel" parent="Banner/LobbyPanel/Rows"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 20
+
+[node name="Mode" type="Label" parent="Banner/LobbyPanel/Rows"]
+layout_mode = 2
+text = "◄   HORDE   ►"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+
+[node name="Blurb" type="Label" parent="Banner/LobbyPanel/Rows"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+
+[node name="Hint" type="Label" parent="Banner/LobbyPanel/Rows"]
+layout_mode = 2
+text = "START to play   ·   D-pad / TAB to change mode   ·   A / ENTER to join"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
