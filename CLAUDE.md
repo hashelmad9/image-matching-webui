@@ -91,6 +91,13 @@ follow lives in `_physics_process` for exactly this reason.
 **A dead player stays visible for `CORPSE_SECONDS`.** Tests that assert a
 body vanishes on death are asserting the wrong contract.
 
+**The navigation mesh is baked at startup, not in the editor.** Changing
+arena geometry needs no rebake step; it also means enemies have no map for
+the first physics frame after launch, which the agent code tolerates.
+
+**Sound is non-positional by design.** Do not attach `AudioStreamPlayer3D`
+to things without first deciding what "listener" means with four cameras.
+
 **A projectile must only be consumed once.** `Projectile` guards this with the
 `_consumed` flag, because `body_entered` can fire more than once before
 `queue_free()` takes effect.

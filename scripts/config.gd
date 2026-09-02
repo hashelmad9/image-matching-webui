@@ -201,3 +201,17 @@ const HORDE_RUNNER_SHARE := 0.25
 ## Wave from which brutes appear; every Nth spawn is one.
 const HORDE_BRUTE_WAVE := 4
 const HORDE_BRUTE_EVERY := 4
+
+
+# --- weapons and pickups --------------------------------------------------
+const PICKUP_RADIUS := 1.1
+const PICKUP_HOVER := 0.9
+const PICKUP_RESPAWN_SECONDS := 12.0
+## Kenney's blasters are authored at roughly a metre; this brings them to
+## hand size on a character that is itself scaled to 0.5.
+const WEAPON_MODEL_SCALE := 0.45
+
+# --- horde boss -------------------------------------------------------------
+## Every Nth wave ends with a boss as its last spawn.
+const HORDE_BOSS_EVERY := 5
+const HORDE_BOSS_POINTS := 5

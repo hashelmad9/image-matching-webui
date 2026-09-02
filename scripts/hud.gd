@@ -98,6 +98,9 @@ func _process(delta: float) -> void:
 	if status.is_empty():
 		# No mode running: the plain warm-up readout.
 		status = "HP %d  ·  KILLS %d" % [maxi(_player.health, 0), _player.score]
+	var weapon := _player.weapon_label()
+	if not weapon.is_empty():
+		status = weapon + "  ·  " + status
 	_status.text = status
 	_banner.text = _player.hud_banner
 

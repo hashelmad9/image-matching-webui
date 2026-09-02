@@ -95,6 +95,42 @@ leader exists. For deathmatch that is the next kill, for the ball game the
 next goal, for the hill the next uncontested second. Horde opts out — it has
 no clock and no tie.
 
+## Weapons and pickups
+
+`weapons.gd` is a registry of stat blocks: cooldown, damage, speed, lifetime,
+pellet count and spread, clip size, bounce count, model, sound. The player
+owns a `weapon` and an `ammo` count; the hub reads the stats when a shot is
+fired and configures each projectile from them. A mutator that names a stat
+overrides the weapon's number; otherwise the weapon's stands.
+
+The blaster never runs dry. The scatter gun and rail gun come from pickups
+with a fixed clip and hand back to the blaster when empty. Pickups sit at the
+four mid-edges, respawn after a delay, and only appear in modes where
+shooting matters — tag and the ball game opt out via `GameMode.pickups()`.
+
+The model in hand is the Kenney blaster at a fixed offset under
+`WeaponMount`, not in a hand bone; see the roadmap for why.
+
+## Navigation
+
+A navigation mesh is baked from the arena's static colliders when the game
+starts (`navigation_builder.gd`), at runtime rather than in the editor so a
+rebuilt arena can never ship with a stale mesh. Each enemy carries a
+`NavigationAgent3D` and steers toward its next path point; the straight line
+is kept for the final approach and as the fallback when no map exists. The
+old sidestep-on-wall survives as a last resort.
+
+## Audio
+
+`sfx.gd` is a pool of non-positional players fed from a name → clips table.
+Names with several clips pick at random and every play gets a little pitch
+jitter, so repeats do not sound stamped out. Frequent sounds are rate-limited:
+four players firing at once would otherwise stack sixteen lasers a second.
+
+It is non-positional on purpose. Four cameras means four listeners and one
+pair of speakers; positional audio in split screen is a problem to solve
+deliberately, not by default.
+
 ## Ricochet
 
 Cover is handled by a ray along each frame's travel rather than by the

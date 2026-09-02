@@ -41,6 +41,11 @@ func can_fire() -> bool:
 	return true
 
 
+## Whether weapon pickups spawn this round.
+func pickups() -> bool:
+	return can_fire()
+
+
 ## Called when play starts, after the countdown.
 func begin() -> void:
 	pass

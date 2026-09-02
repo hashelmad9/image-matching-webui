@@ -54,6 +54,11 @@ static func tally(votes: Dictionary, options: Array[String]) -> String:
 	return tied[randi() % tied.size()]
 
 
+## Whether a mutator sets a given stat, as opposed to leaving it to the weapon.
+static func overrides(id: String, stat: String) -> bool:
+	return (ALL.get(id, {}) as Dictionary).has(stat)
+
+
 static func speed(id: String) -> float:
 	return float(ALL.get(id, {}).get("speed", 1.0))
 

@@ -27,6 +27,11 @@ func friendly_fire() -> bool:
 	return false
 
 
+## The ball is the only target; a rail gun would just be a harder kick.
+func pickups() -> bool:
+	return false
+
+
 func begin() -> void:
 	_goals = [0, 0]
 	_ball = _build_ball()
@@ -149,6 +154,7 @@ func _score(team: int) -> void:
 	var colour := Config.player_color(team)
 	hub.toast_all("GOAL!  %s   %d - %d" % [_team_name(team), _goals[0], _goals[1]], colour)
 	hub.shake_all(Config.SHAKE_HURT)
+	Sfx.play("goal")
 	Effects.spark(hub.world(), _ball.global_position, colour)
 	_reset_ball()
 

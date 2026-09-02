@@ -121,7 +121,7 @@ material half is not.
       [Quaternius Sci-Fi Essentials](https://quaternius.com/packs/scifiessentialskit.html))
 - [x] PBR floor, wall and cover materials from [ambientCG](https://ambientcg.com/),
       triplanar-mapped so nothing needed UVs
-- [ ] Consider an HDRI sky in place of the procedural one
+- [x] HDRI sky (Poly Haven sunset) in place of the procedural one
 - [ ] **Bake lighting** with LightmapGI — the arena is static and drawn four
       times, so baked light is both cheaper and better than realtime here
 - [ ] Re-measure framerate after each addition, not at the end
@@ -144,14 +144,14 @@ material half is not.
 
 ## M7 — Content and variety
 
-- [ ] A second and third weapon with meaningfully different feel
-      ([Kenney Blaster Kit](https://kenney.nl/assets/blaster-kit) covers the models)
-- [ ] Weapon pickups spawning around the arena
+- [x] A second and third weapon with meaningfully different feel: a scatter
+      gun and a rail gun, Kenney Blaster Kit models in hand
+- [x] Weapon pickups at the four mid-edges, respawning after a delay
 - [ ] A second arena, and a way to choose between them
 - [x] Team mode (2v2) — the ball game
-- [ ] Pathfinding for horde enemies (they walk into cover and sidestep)
+- [x] Pathfinding for horde enemies: a navigation mesh baked at startup
 - [x] Horde variety: runners from wave 2, brutes from wave 4
-- [ ] A wave boss
+- [x] A boss every fifth wave
 
 ---
 
@@ -160,13 +160,22 @@ material half is not.
 Sound is the cheapest large gain in perceived quality and is routinely left
 too late. All of this is CC0 and already located — see [ASSETS.md](ASSETS.md).
 
-- [ ] Weapon fire, impacts, footsteps, death, respawn
-- [ ] UI and countdown sounds
+- [x] Weapon fire, impacts, death, respawn, pickups, waves, goals, tags
+- [x] UI: countdown ticks, round start, results bell, votes
+- [ ] Footsteps
 - [ ] Music, with a duck under gunfire
-- [ ] Positional audio, and check what that means with four listeners — Godot
-      has one audio listener per viewport, which needs explicit handling
+- [ ] Positional audio — deliberately not attempted: four cameras means four
+      listeners and one pair of speakers. Everything is non-positional for now
 
 ---
+
+## M7b — Left open on purpose
+
+- [ ] Weapon models sit at a fixed offset from the player, not in a hand bone.
+      The Kenney rig's skin carries a large bind scale, so a BoneAttachment3D
+      needs calibrating by render like the character did
+- [ ] Baked lighting (LightmapGI). Needs UV2 on every mesh and a lightmapper
+      run; the primitives here have no UV2. Worth it once the arena is final
 
 ## M9 — Shipping
 

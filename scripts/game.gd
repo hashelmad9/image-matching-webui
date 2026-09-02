@@ -12,6 +12,7 @@ extends Node
 enum State { LOBBY, COUNTDOWN, PLAYING, RESULTS }
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const PICKUP_SCRIPT := preload("res://scripts/pickup.gd")
 const PROJECTILE_SCENE := preload("res://scenes/projectile.tscn")
 const MODE_SCRIPTS := {
 	"horde": preload("res://scripts/modes/horde.gd"),
@@ -61,6 +62,9 @@ var _ballot: Array[String] = []
 var _votes: Dictionary = {}
 ## Set when a versus round ran out of clock while tied; the next point wins.
 var _sudden_death := false
+var _sfx: Sfx = null
+var _navigation: NavigationRegion3D = null
+var _last_countdown := -1
 
 
 func _ready() -> void:
@@ -69,6 +73,10 @@ func _ready() -> void:
 	# Aiming the lobby camera here beats hand-writing a rotation basis in the
 	# scene file, and keeps it correct if its position is ever moved.
 	_lobby_camera.look_at(Vector3.ZERO, Vector3.UP)
+	_sfx = Sfx.new()
+	_sfx.name = "Sfx"
+	add_child(_sfx)
+	_navigation = NavigationBuilder.build(_world, $World/Arena)
 	_refresh_lobby()
 	_refresh_ui()
 
@@ -150,6 +158,7 @@ func _spawn_player(index: int, device: int) -> void:
 	player.died.connect(_on_player_died)
 	player.damaged.connect(_on_player_damaged)
 	player.respawned.connect(_on_player_respawned)
+	player.weapon_changed.connect(_on_weapon_changed)
 	_split_screen.add_view(player)
 	_apply_mutator_to(player)
 	if _mode != null and _state != State.LOBBY:
@@ -220,8 +229,11 @@ func start_round(mode_id: String, skip_countdown := false) -> void:
 
 	_sudden_death = false
 	_split_screen.clear_toasts()
+	if _mode.pickups():
+		_spawn_pickups()
 	_state = State.COUNTDOWN
 	_timer = Config.COUNTDOWN_SECONDS
+	_last_countdown = -1
 	if skip_countdown:
 		_begin_play()
 	_refresh_ui()
@@ -232,6 +244,7 @@ func _begin_play() -> void:
 	_timer = _mode.round_seconds()
 	for player in players():
 		player.controls_enabled = true
+	Sfx.play("go")
 	_mode.begin()
 
 
@@ -243,6 +256,7 @@ func _end_round() -> void:
 		player.controls_enabled = false
 	_ballot = Mutators.ballot()
 	_votes.clear()
+	Sfx.play("bell")
 	_state = State.RESULTS
 	_timer = Config.RESULTS_SECONDS
 
@@ -284,6 +298,7 @@ func vote(device: int, choice: int) -> void:
 	if _state != State.RESULTS or choice < 0 or choice >= _ballot.size():
 		return
 	_votes[device] = _ballot[choice]
+	Sfx.play("vote")
 
 
 ## Advances the rotation and starts the next round with the voted mutator.
@@ -330,7 +345,7 @@ func _return_to_lobby() -> void:
 
 ## Removes everything a round leaves lying around.
 func _clear_arena() -> void:
-	for group in ["enemies", "projectiles", "effects"]:
+	for group in ["enemies", "projectiles", "effects", "pickups"]:
 		for node in get_tree().get_nodes_in_group(group):
 			node.queue_free()
 
@@ -339,6 +354,10 @@ func _process(delta: float) -> void:
 	match _state:
 		State.COUNTDOWN:
 			_timer -= delta
+			var shown := int(ceil(_timer))
+			if shown != _last_countdown and shown > 0:
+				_last_countdown = shown
+				Sfx.play("tick")
 			if _timer <= 0.0:
 				_begin_play()
 		State.PLAYING:
@@ -368,8 +387,13 @@ func _on_player_fired(shooter: Player, origin: Vector3, direction: Vector3) -> v
 	projectile.shooter = shooter
 	projectile.direction = direction
 	projectile.tint(Config.player_color(shooter.index))
-	projectile.damage = Mutators.damage(_mutator)
-	projectile.bounces_left = Mutators.bounces(_mutator)
+	var stats := Weapons.stats(shooter.weapon)
+	projectile.speed = float(stats["speed"])
+	projectile.lifetime = float(stats["lifetime"])
+	# A mutator that sets damage or bounces overrides the weapon; otherwise
+	# the weapon's own numbers stand.
+	projectile.damage = Mutators.damage(_mutator) if Mutators.overrides(_mutator, "damage") else int(stats["damage"])
+	projectile.bounces_left = Mutators.bounces(_mutator) if Mutators.overrides(_mutator, "bounces") else int(stats["bounces"])
 	if _state == State.PLAYING:
 		projectile.friendly_fire = _mode.friendly_fire()
 		projectile.hit_handler = Callable(_mode, "projectile_hit")
@@ -378,10 +402,13 @@ func _on_player_fired(shooter: Player, origin: Vector3, direction: Vector3) -> v
 	_world.add_child(projectile)
 	Effects.muzzle_flash(_world, origin, Config.player_color(shooter.index))
 	_split_screen.shake(shooter, Config.SHAKE_FIRE)
+	Sfx.play(str(stats["sound"]))
 
 
 func _on_player_damaged(victim: Player, _amount: int, attacker: Node) -> void:
 	_split_screen.shake(victim, Config.SHAKE_DEATH if victim.health <= 0 else Config.SHAKE_HURT)
+	if victim.health <= 0:
+		Sfx.play("death")
 	if attacker is Player and attacker != victim:
 		var view := _split_screen.view_for(attacker as Player)
 		if view != null and view.hud != null:
@@ -390,6 +417,37 @@ func _on_player_damaged(victim: Player, _amount: int, attacker: Node) -> void:
 
 func _on_player_respawned(player: Player) -> void:
 	Effects.muzzle_flash(_world, player.global_position, Config.player_color(player.index))
+	Sfx.play("respawn")
+
+
+func _on_weapon_changed(player: Player, kind: String) -> void:
+	if kind == Weapons.DEFAULT:
+		toast(player, "BLASTER", Color(0.8, 0.8, 0.8))
+	else:
+		toast(player, "%s  ×%d" % [Weapons.title(kind), player.ammo], Color(1, 0.9, 0.5))
+		Sfx.play("pickup")
+
+
+## Weapon pickups at the four mid-edges, alternating what they hand out.
+func _spawn_pickups() -> void:
+	var inset := Config.ARENA_HALF_EXTENT * 0.66
+	var spots := [
+		Vector3(0.0, 0.0, -inset), Vector3(inset, 0.0, 0.0),
+		Vector3(0.0, 0.0, inset), Vector3(-inset, 0.0, 0.0),
+	]
+	for i in spots.size():
+		var pickup: Pickup = PICKUP_SCRIPT.new()
+		pickup.kind = Weapons.PICKUP_KINDS[i % Weapons.PICKUP_KINDS.size()]
+		pickup.position = spots[i] + Vector3.UP * Config.PICKUP_HOVER
+		_world.add_child(pickup)
+
+
+func navigation() -> NavigationRegion3D:
+	return _navigation
+
+
+func sfx() -> Sfx:
+	return _sfx
 
 
 func _on_player_died(victim: Player, killer: Node) -> void:

@@ -34,6 +34,9 @@ func _run() -> void:
 	print("\n== ui and mode moments ==")
 	await _test_ui()
 
+	print("\n== navigation, boss, weapons, audio, sky ==")
+	await _test_systems()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -270,10 +273,12 @@ func _test_modes() -> void:
 	_check(enemies.size() >= Config.HORDE_BASE_ENEMIES, "horde: wave one spawned %d enemies" % enemies.size())
 	var enemy: Enemy = enemies[0]
 	var spawn_far := true
-	for player in players:
-		if enemy.global_position.distance_to(player.global_position) < 6.0:
-			spawn_far = false
-	_check(spawn_far, "horde: enemies spawn away from players")
+	for attempt in 12:
+		var candidate: Vector3 = main._mode._spawn_point()
+		for player in players:
+			if candidate.distance_to(player.global_position) < 6.0:
+				spawn_far = false
+	_check(spawn_far, "horde: spawn points are chosen away from players")
 	var before := first.score
 	enemy.take_damage(10_000, first)
 	await process_frame
@@ -522,8 +527,8 @@ func _test_feel() -> void:
 	for enemy in [walker, brute, runner]:
 		enemy.free()
 	var horde_script := load("res://scripts/modes/horde.gd")
-	_check(horde_script.kind_for_spawn(1, 4) == "walker", "horde: wave one is all walkers")
-	_check(horde_script.kind_for_spawn(Config.HORDE_BRUTE_WAVE, Config.HORDE_BRUTE_EVERY) == "brute", "horde: brutes arrive on schedule")
+	_check(horde_script.kind_for_spawn(1, 4, 4) == "walker", "horde: wave one is all walkers")
+	_check(horde_script.kind_for_spawn(Config.HORDE_BRUTE_WAVE, Config.HORDE_BRUTE_EVERY, 12) == "brute", "horde: brutes arrive on schedule")
 
 	main.queue_free()
 	await process_frame
@@ -649,6 +654,143 @@ func _test_ui() -> void:
 	await _wait_physics(3)
 	_check(hud_two.toast_count() > toasts_before, "ball: a goal is announced to everyone")
 	_check(split.view_for(second).shake > 0.0, "ball: a goal shakes every view")
+
+	main.queue_free()
+	await process_frame
+
+
+# --- navigation, boss, weapons, audio, sky ------------------------------------
+
+func _test_systems() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	await process_frame
+	var first: Player = main.players()[0]
+	var second: Player = main.players()[1]
+	var world: Node3D = main.world()
+
+	# --- navigation mesh -------------------------------------------------------
+	var region: NavigationRegion3D = main.navigation()
+	_check(region != null and region.navigation_mesh.get_polygon_count() > 0,
+		"nav: a navigation mesh is baked from the arena (%d polygons)" % region.navigation_mesh.get_polygon_count())
+	main.start_round("horde", true)
+	await process_frame
+	# Park both players north of the centre block and drop an enemy directly
+	# south of it, so a straight line runs into five metres of cover.
+	first.global_position = Vector3(0.0, Config.PLAYER_HEIGHT * 0.5, -7.0)
+	second.global_position = Vector3(2.0, Config.PLAYER_HEIGHT * 0.5, -9.0)
+	first.controls_enabled = false
+	second.controls_enabled = false
+	var enemy: Enemy = load("res://scenes/enemy.tscn").instantiate()
+	enemy.configure("walker", Config.ENEMY_SPEED)
+	enemy.position = Vector3(0.0, Config.PLAYER_HEIGHT * 0.5, 7.0)
+	world.add_child(enemy)
+	await _wait_physics(int(6.0 * 60))
+	var gap := enemy.global_position.distance_to(first.global_position)
+	_check(gap < Config.ENEMY_ATTACK_RANGE + 1.0, "nav: an enemy paths around the centre block (%.1fm away)" % gap)
+	enemy.queue_free()
+
+	# --- boss ----------------------------------------------------------------------
+	var horde := load("res://scripts/modes/horde.gd")
+	_check(horde.kind_for_spawn(Config.HORDE_BOSS_EVERY, 12, 12) == "boss", "boss: the last spawn of a boss wave is a boss")
+	_check(horde.kind_for_spawn(Config.HORDE_BOSS_EVERY, 3, 12) != "boss", "boss: earlier spawns of that wave are not")
+	_check(horde.kind_for_spawn(Config.HORDE_BOSS_EVERY + 1, 14, 14) != "boss", "boss: other waves have none")
+	var boss: Enemy = load("res://scenes/enemy.tscn").instantiate()
+	boss.configure("boss", Config.ENEMY_SPEED)
+	_check(boss.health >= Config.ENEMY_HEALTH * 8, "boss: has a lot of health")
+	boss.died.connect(main._mode._on_enemy_died)
+	world.add_child(boss)
+	await process_frame
+	var before := first.score
+	boss.take_damage(100_000, first)
+	await process_frame
+	_check(first.score == before + Config.HORDE_BOSS_POINTS, "boss: killing it is worth %d" % Config.HORDE_BOSS_POINTS)
+
+	# --- weapons -----------------------------------------------------------------
+	main.start_round("deathmatch", true)
+	await process_frame
+	_check(first.weapon == Weapons.DEFAULT and first.ammo == -1, "weapons: rounds start with the blaster")
+	_check(first.get_node("WeaponMount").get_child_count() >= 1, "weapons: the blaster model is in hand")
+	var shots := [0]
+	first.fired.connect(func(_p: Player, _o: Vector3, _d: Vector3) -> void: shots[0] += 1)
+	first.equip("scatter")
+	_check(first.ammo == 8 and first.weapon_label() == "SCATTER ×8", "weapons: a pickup loads a clip")
+	first.controls_enabled = true
+	first._fire_cooldown = 0.0
+	var pull := PlayerInput.new()
+	pull.firing = true
+	first._update_firing(pull)
+	_check(shots[0] == 5, "weapons: the scatter gun fires five pellets")
+	_check(first.ammo == 7, "weapons: one volley costs one round")
+	await process_frame
+	var speeds := {}
+	for node in get_nodes_in_group("projectiles"):
+		speeds[node.speed] = true
+	_check(speeds.has(34.0), "weapons: scatter pellets carry the weapon's speed")
+	first.ammo = 1
+	first._fire_cooldown = 0.0
+	first._update_firing(pull)
+	_check(first.weapon == Weapons.DEFAULT, "weapons: an empty clip hands back the blaster")
+	first.equip("rail")
+	first._fire_cooldown = 0.0
+	first._update_firing(pull)
+	await process_frame
+	var rail: Projectile = null
+	for node in get_nodes_in_group("projectiles"):
+		if node.speed == 95.0:
+			rail = node
+	_check(rail != null and rail.damage == 60 and rail.bounces_left == 0, "weapons: the rail shot is fast, heavy and does not bounce")
+	main.set_mutator("one_hit")
+	first._fire_cooldown = 0.0
+	first._update_firing(pull)
+	await process_frame
+	var last: Projectile = null
+	for node in get_nodes_in_group("projectiles"):
+		last = node
+	_check(last.damage == 10_000, "weapons: a damage mutator overrides the weapon")
+	main.set_mutator(Mutators.NONE)
+
+	# --- pickups -----------------------------------------------------------------
+	var pickups := get_nodes_in_group("pickups")
+	_check(pickups.size() == 4, "pickups: four spawn for a shooting round")
+	var pickup: Pickup = pickups[0]
+	first.equip(Weapons.DEFAULT)
+	first.global_position = pickup.global_position
+	first.global_position.y = Config.PLAYER_HEIGHT * 0.5
+	await _wait_physics(4)
+	_check(first.weapon == pickup.kind, "pickups: walking over one equips it")
+	_check(not pickup.is_available() and not pickup.visible, "pickups: it disappears until it respawns")
+	main.start_round("tag", true)
+	await process_frame
+	await process_frame
+	_check(get_nodes_in_group("pickups").is_empty(), "pickups: none in tag")
+	main.start_round("ball_game", true)
+	await process_frame
+	await process_frame
+	_check(get_nodes_in_group("pickups").is_empty(), "pickups: none in the ball game")
+
+	# --- audio -------------------------------------------------------------------
+	var sfx: Sfx = main.sfx()
+	var missing: PackedStringArray = []
+	for name: String in Sfx.SOUNDS:
+		if not sfx.has(name):
+			missing.append(name)
+	_check(missing.is_empty(), "audio: every named sound has a clip (%s)" % ", ".join(missing))
+	var plays := sfx.play_count()
+	Sfx.play("bell")
+	_check(sfx.play_count() == plays + 1, "audio: a play request reaches a player")
+	Sfx.play("fire")
+	Sfx.play("fire")
+	_check(sfx.play_count() == plays + 2, "audio: rapid repeats of a shot are rate-limited")
+
+	# --- sky ---------------------------------------------------------------------
+	var env: WorldEnvironment = main.get_node("World/Arena/Environment")
+	var sky_material := env.environment.sky.sky_material
+	_check(sky_material is PanoramaSkyMaterial and (sky_material as PanoramaSkyMaterial).panorama != null,
+		"sky: the HDRI panorama is loaded")
 
 	main.queue_free()
 	await process_frame

@@ -16,7 +16,8 @@ Plug in a pad, press A, press Start.
 | **King of the Hill** | 2–4 | Hold the centre alone for thirty seconds. |
 | **Ball Game** | 2v2 | Shoot or shove the ball into the other team's goal. |
 
-Every shot bounces off cover once, so bank shots are a thing. A tie at the
+Weapon pickups sit around the arena: a scatter gun and a rail gun with a
+fixed clip each. Every shot bounces off cover once, so bank shots are a thing. A tie at the
 whistle goes to sudden death. Between rounds everyone votes on a mutator for
 the next one — one-hit kills, infinite ricochet, fast feet, rapid fire, glass
 cannon. In deathmatch, killing whoever is ahead is worth double.

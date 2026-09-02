@@ -15,8 +15,10 @@ signal fired(shooter: Player, origin: Vector3, direction: Vector3)
 ## Emitted on every hit that lands, before death is decided.
 signal damaged(victim: Player, amount: int, attacker: Node)
 signal respawned(player: Player)
+signal weapon_changed(player: Player, kind: String)
 
 @onready var _character: Node3D = $Character
+@onready var _weapon_mount: Node3D = $WeaponMount
 
 ## Stable identity. Picks the colour and spawn point, and survives other
 ## players leaving. This is NOT the split-screen slot.
@@ -46,6 +48,9 @@ var hud_status := ""
 var hud_banner := ""
 ## Seconds of spawn protection remaining.
 var protection := 0.0
+var weapon := Weapons.DEFAULT
+## Shots left in the current weapon; -1 means unlimited.
+var ammo := -1
 
 var _fire_cooldown := 0.0
 var _respawn_countdown := -1.0
@@ -67,6 +72,7 @@ func _ready() -> void:
 		_character, Config.player_skin(index), Config.player_tint(index)
 	)
 	_animation_player = CharacterRig.build_animation_player(_character)
+	_show_weapon(weapon)
 	_move_to_spawn()
 
 
@@ -154,11 +160,50 @@ func _update_movement(input: PlayerInput, delta: float) -> void:
 func _update_firing(input: PlayerInput) -> void:
 	if not input.firing or _fire_cooldown > 0.0:
 		return
-	_fire_cooldown = Config.FIRE_COOLDOWN * mutator_fire_scale
-	var direction := forward()
-	var origin := global_position + direction * Config.MUZZLE_FORWARD
+	var stats := Weapons.stats(weapon)
+	_fire_cooldown = float(stats["cooldown"]) * mutator_fire_scale
+	var origin := global_position + forward() * Config.MUZZLE_FORWARD
 	origin.y = Config.MUZZLE_HEIGHT
-	fired.emit(self, origin, direction)
+	# A volley fans evenly across the spread; a single shot goes straight.
+	var pellets := int(stats["pellets"])
+	var spread := float(stats["spread"])
+	for i in pellets:
+		var offset := 0.0
+		if pellets > 1:
+			offset = lerpf(-spread, spread, float(i) / float(pellets - 1))
+		fired.emit(self, origin, Basis(Vector3.UP, yaw + offset) * Vector3.FORWARD)
+	if ammo > 0:
+		ammo -= 1
+		if ammo == 0:
+			equip(Weapons.DEFAULT)
+
+
+## Switches weapon and loads its clip. The blaster never runs dry.
+func equip(kind: String) -> void:
+	weapon = kind
+	ammo = int(Weapons.stats(kind)["ammo"])
+	_show_weapon(kind)
+	weapon_changed.emit(self, kind)
+
+
+func _show_weapon(kind: String) -> void:
+	if _weapon_mount == null:
+		return
+	for child in _weapon_mount.get_children():
+		child.queue_free()
+	var packed := load(Weapons.stats(kind)["model"]) as PackedScene
+	if packed == null:
+		return
+	var model: Node3D = packed.instantiate()
+	model.scale = Vector3.ONE * Config.WEAPON_MODEL_SCALE
+	_weapon_mount.add_child(model)
+
+
+## "SCATTER ×5", or empty for the default weapon, for the HUD.
+func weapon_label() -> String:
+	if weapon == Weapons.DEFAULT:
+		return ""
+	return "%s ×%d" % [Weapons.title(weapon), ammo]
 
 
 func _play(animation: String) -> void:
@@ -240,6 +285,8 @@ func reset_for_round() -> void:
 	health = max_health
 	protection = 0.0
 	can_fire = true
+	if weapon != Weapons.DEFAULT:
+		equip(Weapons.DEFAULT)
 	highlight(false)
 	_move_to_spawn()
 

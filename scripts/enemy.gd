@@ -15,6 +15,7 @@ const KINDS := {
 	"walker": {"health": 1.0, "speed": 1.0, "damage": 1.0, "scale": 0.5, "tint": Color(0.8, 0.95, 0.8)},
 	"runner": {"health": 0.5, "speed": 1.7, "damage": 0.6, "scale": 0.42, "tint": Color(1.0, 0.85, 0.6)},
 	"brute": {"health": 3.0, "speed": 0.65, "damage": 2.2, "scale": 0.68, "tint": Color(0.7, 0.6, 0.9)},
+	"boss": {"health": 9.0, "speed": 0.8, "damage": 3.0, "scale": 0.95, "tint": Color(1.0, 0.45, 0.4)},
 }
 
 var kind := "walker"
@@ -22,6 +23,7 @@ var health := Config.ENEMY_HEALTH
 var speed := Config.ENEMY_SPEED
 var damage := Config.ENEMY_DAMAGE
 
+var _agent: NavigationAgent3D = null
 var _attack_cooldown := 0.0
 var _detour_time := 0.0
 var _detour_sign := 1.0
@@ -39,6 +41,14 @@ func _ready() -> void:
 	var animation_player := CharacterRig.build_animation_player(_character)
 	if animation_player != null and animation_player.has_animation("run"):
 		animation_player.play("run")
+	# Paths come from the navigation mesh baked at startup; without one the
+	# agent simply returns the target and the chase degrades to a straight line.
+	_agent = NavigationAgent3D.new()
+	_agent.radius = Config.PLAYER_RADIUS
+	_agent.height = Config.PLAYER_HEIGHT
+	_agent.path_desired_distance = 0.8
+	_agent.target_desired_distance = Config.ENEMY_ATTACK_RANGE * 0.8
+	add_child(_agent)
 
 
 ## Sets the stat block. Call before adding to the tree; `wave_speed` is the
@@ -69,6 +79,16 @@ func _physics_process(delta: float) -> void:
 	to_target.y = 0.0
 	var distance := to_target.length()
 	var direction := to_target / maxf(distance, 0.001)
+	# Steer along the navigation path when one exists; the straight line is
+	# only used for the final approach and as the fallback.
+	if _agent != null and distance > Config.ENEMY_ATTACK_RANGE:
+		_agent.target_position = target.global_position
+		if not _agent.is_navigation_finished():
+			var waypoint := _agent.get_next_path_position()
+			var to_waypoint := waypoint - global_position
+			to_waypoint.y = 0.0
+			if to_waypoint.length() > 0.05:
+				direction = to_waypoint.normalized()
 	# A zero-yaw node faces -Z; see PlayerInput.yaw_from_stick for the maths.
 	rotation.y = atan2(-direction.x, -direction.z)
 

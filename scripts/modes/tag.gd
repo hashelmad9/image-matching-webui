@@ -82,6 +82,7 @@ func _set_it(player: Player) -> void:
 	if previous != null:
 		hub.toast(previous, "TAGGED P%d" % (_it.index + 1), colour)
 	Effects.spark(hub.world(), _it.global_position + Vector3.UP, colour)
+	Sfx.play("tag")
 
 
 func is_it(player: Player) -> bool:

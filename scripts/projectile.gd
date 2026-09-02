@@ -11,6 +11,8 @@ extends Area3D
 var direction := Vector3.FORWARD
 var shooter: Player = null
 var damage := Config.PROJECTILE_DAMAGE
+var speed := Config.PROJECTILE_SPEED
+var lifetime := Config.PROJECTILE_LIFETIME
 ## False in co-op modes: shots pass straight through teammates.
 var friendly_fire := true
 ## Optional `(projectile, body) -> bool`. Returning true means the mode
@@ -42,6 +44,7 @@ func _ready() -> void:
 		Config.LAYER_WORLD | Config.LAYER_PLAYERS | Config.LAYER_ENEMIES | Config.LAYER_BALL
 	)
 	body_entered.connect(_on_body_entered)
+	_remaining_life = lifetime
 	_apply_tint()
 
 
@@ -85,13 +88,14 @@ func _physics_process(delta: float) -> void:
 	# overlap shape: a ray gives the surface normal for the bounce and cannot
 	# tunnel through a thin wall at high speed.
 	var from := global_position
-	var to := from + direction * Config.PROJECTILE_SPEED * delta
+	var to := from + direction * speed * delta
 	var query := PhysicsRayQueryParameters3D.create(from, to, Config.LAYER_WORLD)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		var world := get_parent() as Node3D
 		if world != null:
 			Effects.spark(world, hit["position"], colour)
+		Sfx.play("wall")
 		if bounces_left <= 0:
 			_consume()
 			return
@@ -123,6 +127,7 @@ func _on_body_entered(body: Node3D) -> void:
 		return  # Pass through a teammate rather than wasting the shot.
 	if body.has_method("take_damage"):
 		body.take_damage(damage, shooter)
+		Sfx.play("hit")
 		var world := get_parent() as Node3D
 		if world != null:
 			Effects.spark(world, global_position, colour)

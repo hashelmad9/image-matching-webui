@@ -35,6 +35,15 @@ The 1K-JPG variants, keeping only Color, NormalGL, Roughness and Metalness.
 Displacement is deliberately dropped: parallax is a per-pixel cost, and split
 screen pays it four times.
 
+| Asset | Source | Licence | Used for |
+| --- | --- | --- | --- |
+| `assets/weapons/{blaster,scatter,rail}.glb` + `Textures/colormap.png` | [Kenney — Blaster Kit](https://kenney.nl/assets/blaster-kit) | CC0 | Weapon in hand, pickups |
+| `assets/audio/*.ogg` (21 clips) | [Kenney — Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds), [Impact Sounds](https://kenney.nl/assets/impact-sounds), [UI Audio](https://kenney.nl/assets/ui-audio) | CC0 | Every sound in `scripts/sfx.gd` |
+| `assets/sky/belfast_sunset_puresky_1k.hdr` | [Poly Haven](https://polyhaven.com/a/belfast_sunset_puresky) | CC0 | The sky, and the ambient light it feeds |
+
+Clips are renamed to what they are for (`fire_0`, `wall_1`, `goal`), so the
+sound table reads without cross-referencing pack filenames.
+
 ## Verified sources
 
 All confirmed CC0 and reachable without an account.
@@ -119,6 +128,11 @@ harmless and stops the sky ever painting a disc for the floor to reflect.)
 **ambientCG's zips include a `.tres`.** It is a usable Godot material as-is,
 but it enables the heightmap and uses plain UVs, so this project writes its
 own material and only borrows the texture-channel settings from it.
+
+**Kenney's GLB weapons share one texture by relative path.** Each `.glb`
+references `Textures/colormap.png` next to it. Copy the model alone and the
+import logs "Can't open file" and the gun comes in white. Keep the `Textures/`
+folder beside the models.
 
 **Animations arrive as separate FBX scenes.** Each clip file contains its own
 `AnimationPlayer` and a duplicate skeleton. `Player._setup_animations()` lifts

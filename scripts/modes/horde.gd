@@ -66,6 +66,7 @@ func _start_wave() -> void:
 	wave += 1
 	hub.toast_all("WAVE %d" % wave, Color(1, 0.6, 0.5))
 	hub.shake_all(Config.SHAKE_FIRE)
+	Sfx.play("wave")
 	_to_spawn = Config.HORDE_BASE_ENEMIES + Config.HORDE_ENEMIES_PER_WAVE * (wave - 1)
 	_spawned_this_wave = 0
 	_spawn_timer = 0.0
@@ -76,16 +77,24 @@ func _spawn_enemy() -> void:
 	_spawned_this_wave += 1
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	var wave_speed := Config.ENEMY_SPEED + Config.ENEMY_SPEED_PER_WAVE * (wave - 1)
-	enemy.configure(kind_for_spawn(wave, _spawned_this_wave), wave_speed)
+	var total := Config.HORDE_BASE_ENEMIES + Config.HORDE_ENEMIES_PER_WAVE * (wave - 1)
+	enemy.configure(kind_for_spawn(wave, _spawned_this_wave, total), wave_speed)
 	enemy.position = _spawn_point()
 	enemy.died.connect(_on_enemy_died)
 	hub.world().add_child(enemy)
+	if enemy.kind == "boss":
+		hub.toast_all("BOSS INCOMING", Color(1, 0.4, 0.35))
+		hub.shake_all(Config.SHAKE_DEATH)
+		Sfx.play("wave")
 
 
 ## Which enemy the Nth spawn of a wave is. Early waves are all walkers;
-## runners join from HORDE_RUNNER_WAVE, and a brute every few spawns from
-## HORDE_BRUTE_WAVE, so each wave feels different from the last.
-static func kind_for_spawn(wave_number: int, ordinal: int) -> String:
+## runners join from HORDE_RUNNER_WAVE, a brute every few spawns from
+## HORDE_BRUTE_WAVE, and every HORDE_BOSS_EVERY waves the last spawn is a
+## boss, so each wave feels different from the last.
+static func kind_for_spawn(wave_number: int, ordinal: int, total: int) -> String:
+	if wave_number % Config.HORDE_BOSS_EVERY == 0 and ordinal == total:
+		return "boss"
 	if wave_number >= Config.HORDE_BRUTE_WAVE and ordinal % Config.HORDE_BRUTE_EVERY == 0:
 		return "brute"
 	if wave_number >= Config.HORDE_RUNNER_WAVE and randf() < Config.HORDE_RUNNER_SHARE:
@@ -118,9 +127,15 @@ func _spawn_point() -> Vector3:
 	return best
 
 
-func _on_enemy_died(_enemy: Enemy, killer: Node) -> void:
+func _on_enemy_died(enemy: Enemy, killer: Node) -> void:
+	var points := Config.HORDE_BOSS_POINTS if enemy.kind == "boss" else 1
 	if killer is Player:
-		(killer as Player).score += 1
+		(killer as Player).score += points
+	if enemy.kind == "boss":
+		var who := "P%d" % ((killer as Player).index + 1) if killer is Player else "SOMEONE"
+		hub.toast_all("BOSS DOWN  ·  %s  +%d" % [who, points], Color(0.6, 1, 0.6))
+		hub.shake_all(Config.SHAKE_HURT)
+		Sfx.play("bell")
 
 
 func enemies_alive() -> int:
