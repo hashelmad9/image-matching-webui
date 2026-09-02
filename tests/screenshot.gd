@@ -22,8 +22,10 @@ func _run() -> void:
 	for device in [Config.KEYBOARD_DEVICE, 0, 1, 2]:
 		main._try_join(device)
 
-	# Let the bodies settle onto the floor and the cameras reach their players.
-	for i in 90:
+	# Horde is the most representative frame: zombies closing in on four
+	# players. Skipping the countdown keeps the render deterministic.
+	main.start_round("horde", true)
+	for i in 240:
 		await physics_frame
 	for i in 10:
 		await process_frame

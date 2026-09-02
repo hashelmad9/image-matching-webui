@@ -79,6 +79,11 @@ resolution — an earlier version of this game did, and it was strictly worse.
 `get_aabb()` and bone rests both report the wrong size for a rigged model, so
 scale must be calibrated against a rendered reference, never a measurement.
 
+**Rules live in `scripts/modes/`, not in the player.** `Player` reports a
+death and stops; the mode decides what it means. Adding a mode means
+subclassing `GameMode` and overriding only what differs — see DESIGN.md. A
+mode that spawns props must free them in `_exit_tree()`.
+
 **A projectile must only be consumed once.** `Projectile` guards this with the
 `_consumed` flag, because `body_entered` can fire more than once before
 `queue_free()` takes effect.

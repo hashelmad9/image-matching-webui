@@ -25,6 +25,9 @@ func _run() -> void:
 	print("\n== scene integration ==")
 	await _test_join_and_spawn()
 
+	print("\n== game modes ==")
+	await _test_modes()
+
 	print("\n%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -231,3 +234,139 @@ func _count_projectiles(world: Node) -> int:
 		if child is Projectile:
 			count += 1
 	return count
+
+
+# --- game modes -------------------------------------------------------------
+
+func _wait_physics(frames: int) -> void:
+	for i in frames:
+		await physics_frame
+
+
+func _test_modes() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	main._try_join(Config.KEYBOARD_DEVICE)
+	main._try_join(0)
+	await process_frame
+	var players: Array = main.players()
+	var first: Player = players[0]
+	var second: Player = players[1]
+
+	# --- horde ---------------------------------------------------------------
+	main.start_round("horde", true)
+	await process_frame
+	_check(main.state() == main.State.PLAYING, "horde: round is playing")
+	_check(main.current_mode_id() == "horde", "horde: mode id reported")
+	await _wait_physics(int((Config.HORDE_FIRST_WAVE_DELAY + 2.5) * 60))
+	var enemies := get_nodes_in_group("enemies")
+	_check(enemies.size() >= Config.HORDE_BASE_ENEMIES, "horde: wave one spawned %d enemies" % enemies.size())
+	var enemy: Enemy = enemies[0]
+	var spawn_far := true
+	for player in players:
+		if enemy.global_position.distance_to(player.global_position) < 6.0:
+			spawn_far = false
+	_check(spawn_far, "horde: enemies spawn away from players")
+	var before := first.score
+	enemy.take_damage(10_000, first)
+	await process_frame
+	_check(first.score == before + 1, "horde: killing an enemy scores for the shooter")
+	_check(get_nodes_in_group("enemies").size() == enemies.size() - 1, "horde: dead enemy leaves the arena")
+	# A teammate cannot be shot in co-op.
+	var projectile: Projectile = main.PROJECTILE_SCENE.instantiate()
+	projectile.shooter = first
+	projectile.friendly_fire = false
+	main.world().add_child(projectile)
+	var hp := second.health
+	projectile._on_body_entered(second)
+	_check(second.health == hp, "horde: shots pass through teammates")
+	_check(not projectile.is_queued_for_deletion(), "horde: a pass-through shot is not spent")
+	projectile.queue_free()
+	# Down and revive.
+	second.take_damage(10_000, null)
+	await process_frame
+	_check(second.is_downed and second.visible, "horde: a dead player is downed, not hidden")
+	_check(main.state() == main.State.PLAYING, "horde: one player down does not end the round")
+	first.global_position = second.global_position + Vector3(1.0, 0.0, 0.0)
+	await _wait_physics(int((Config.REVIVE_SECONDS + 0.5) * 60))
+	_check(not second.is_downed and second.health == Config.PLAYER_MAX_HEALTH, "horde: a teammate nearby revives the downed player")
+	# Everyone down ends it.
+	first.take_damage(10_000, null)
+	second.take_damage(10_000, null)
+	await process_frame
+	await process_frame
+	_check(main.state() == main.State.RESULTS, "horde: all players down ends the round")
+	_check(main._headline.begins_with("OVERRUN"), "horde: results headline reports the wave")
+
+	# --- rotation --------------------------------------------------------------
+	main.next_round()
+	await process_frame
+	_check(main.current_mode_id() == "deathmatch", "rotation: horde is followed by deathmatch")
+	_check(main.state() == main.State.COUNTDOWN, "rotation: the next round starts with a countdown")
+	_check(not first.controls_enabled, "rotation: controls are frozen during the countdown")
+	_check(get_nodes_in_group("enemies").is_empty(), "rotation: enemies are cleared between rounds")
+	_check(first.score == 0 and not first.is_dead, "rotation: players are reset for the new round")
+
+	# --- deathmatch ----------------------------------------------------------
+	main.start_round("deathmatch", true)
+	await process_frame
+	second.take_damage(10_000, first)
+	await process_frame
+	_check(first.score == 1, "deathmatch: a kill is a point")
+	_check(second.is_dead and not second.visible, "deathmatch: the victim awaits a respawn")
+	first.score = Config.DEATHMATCH_KILL_TARGET
+	await process_frame
+	_check(main.state() == main.State.RESULTS, "deathmatch: reaching the target ends the round")
+	_check(main._headline == "P1 WINS", "deathmatch: the winner is announced")
+	_check(int(main._session_wins.get(0, 0)) == 1, "deathmatch: the winner earns a session win")
+
+	# --- tag -------------------------------------------------------------------
+	main.start_round("tag", true)
+	await process_frame
+	var mode: GameMode = main._mode
+	var it_count := 0
+	for player in players:
+		if mode.is_it(player):
+			it_count += 1
+	_check(it_count == 1, "tag: exactly one player starts as it")
+	_check(not first.can_fire and not second.can_fire, "tag: nobody can shoot")
+	var it: Player = first if mode.is_it(first) else second
+	var runner: Player = second if it == first else first
+	_check(it.speed_multiplier > 1.0, "tag: it is faster")
+	runner.global_position = it.global_position + Vector3(0.8, 0.0, 0.0)
+	await _wait_physics(int((Config.TAG_IMMUNITY + 0.3) * 60))
+	_check(mode.is_it(runner), "tag: touching it passes the tag")
+	_check(it.speed_multiplier == 1.0, "tag: the old it loses the speed boost")
+
+	# --- king of the hill ----------------------------------------------------
+	main.start_round("king_of_the_hill", true)
+	await process_frame
+	first.global_position = Vector3(0.0, Config.PLAYER_HEIGHT * 0.5, 4.0)
+	await _wait_physics(int(1.6 * 60))
+	_check(first.score >= 1, "hill: holding the centre alone scores (%d)" % first.score)
+	_check(second.score == 0, "hill: a player outside the zone does not score")
+	second.global_position = Vector3(0.0, Config.PLAYER_HEIGHT * 0.5, -4.0)
+	var held := first.score
+	await _wait_physics(int(1.5 * 60))
+	_check(first.score == held, "hill: a contested hill scores for nobody")
+
+	# --- ball game -------------------------------------------------------------
+	main.start_round("ball_game", true)
+	await process_frame
+	var ball: RigidBody3D = main._mode._ball
+	_check(is_instance_valid(ball), "ball: a ball is spawned")
+	ball.global_position = Vector3(Config.ARENA_HALF_EXTENT - 1.0, 1.0, 0.0)
+	await _wait_physics(3)
+	_check(first.score == 1, "ball: crossing the +X line scores for red (P1)")
+	_check(second.score == 0, "ball: blue does not score from red's goal")
+	_check(ball.global_position.length() < 6.0, "ball: the ball resets to the centre after a goal")
+	var kick := Projectile.new()
+	kick.direction = Vector3.RIGHT
+	_check(main._mode.projectile_hit(kick, ball), "ball: a shot hitting the ball is claimed by the mode")
+	kick.free()
+	await _wait_physics(2)
+	_check(ball.linear_velocity.x > 0.5, "ball: the shot kicks the ball")
+
+	main.queue_free()
+	await process_frame

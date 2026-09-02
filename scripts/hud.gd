@@ -29,5 +29,9 @@ func _apply_colour() -> void:
 func _process(_delta: float) -> void:
 	if _player == null or not is_instance_valid(_player) or _label == null:
 		return
-	var status := "DOWN" if _player.is_dead else "HP %d" % maxi(_player.health, 0)
-	_label.text = "P%d  %s  KILLS %d" % [_player.index + 1, status, _player.score]
+	var status := _player.hud_status
+	if status.is_empty():
+		# No mode running: the plain warm-up readout.
+		status = "DOWN" if _player.is_dead else "HP %d" % maxi(_player.health, 0)
+		status += "  KILLS %d" % _player.score
+	_label.text = "P%d  %s" % [_player.index + 1, status]

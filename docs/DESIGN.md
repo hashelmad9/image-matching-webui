@@ -12,12 +12,40 @@ How the pieces fit together, and why they are arranged this way.
 | `scenes/projectile.tscn` | A single shot. |
 | `scenes/hud.tscn` | One player's HUD, instanced per viewport. |
 | `scripts/config.gd` | Every tuning constant, colours and spawn points. |
-| `scripts/game.gd` | Seats, joining, spawning, shot and score wiring. |
+| `scripts/game.gd` | The hub: seats, round flow, mode rotation, banners. |
+| `scripts/modes/game_mode.gd` | Base class a round's rules extend. |
+| `scripts/modes/*.gd` | Horde, deathmatch, tag, king of the hill, ball game. |
+| `scripts/enemy.gd` + `scenes/enemy.tscn` | Horde enemy: chase, swing, die. |
+| `scripts/character_rig.gd` | Skin and animation helpers shared by players and enemies. |
 | `scripts/split_screen.gd` | Per-player viewports, layout and camera follow. |
 | `scripts/player.gd` | Movement, aiming, damage, respawn. |
 | `scripts/player_input.gd` | Device-agnostic input and stick maths. |
 | `scripts/projectile.gd` | Flight, expiry and hit detection. |
 | `scripts/hud.gd` | Health and score readout. |
+
+## The hub and the modes
+
+The game is a rotation of short rounds, each governed by a `GameMode`. The
+hub (`game.gd`) owns the flow — `LOBBY → COUNTDOWN → PLAYING → RESULTS →`
+next mode — and asks the current mode what the rules are. A mode overrides
+only what it needs: whether shots hurt other players, whether anyone can
+shoot, what happens on death, what ends the round, who won, and what to put
+on each HUD.
+
+That split keeps a new mode small. Tag is eighty lines. It also keeps the
+player free of rules: `Player.take_damage()` emits `died` and stops, and the
+mode decides whether that means a timed respawn (versus) or lying on the
+floor until a teammate arrives (horde).
+
+Modes build their own props — the hill zone, the ball, the goals — in
+`begin()` and free them in `_exit_tree()`, so switching modes cannot leak
+geometry. Enemies and projectiles are in groups and the hub clears both
+between rounds.
+
+Projectiles carry two hooks set by the hub at spawn time: `friendly_fire`
+(false in co-op, so shots pass through teammates rather than being wasted on
+them) and `hit_handler`, which lets a mode claim a hit — the ball game uses
+it to turn a shot into a kick.
 
 ## Joining and seats
 

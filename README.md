@@ -4,17 +4,25 @@ A 3D split-screen arena shooter for Windows, for two to four people on one
 couch and one screen. Built with [Godot 4.7](https://godotengine.org).
 
 Players join by pressing a button on any connected controller, and the screen
-re-partitions itself as they come and go. There is no lobby to back out to and
-no menu to navigate — plug in a pad, press A, you are in the match.
+re-partitions itself as they come and go. Rounds rotate through a set of short
+game modes — some co-op, some versus — with a session scoreboard in between.
+Plug in a pad, press A, press Start.
+
+| Mode | Players | The idea |
+| --- | --- | --- |
+| **Horde** | 1–4, co-op | Survive escalating waves of zombies. Stand by a downed friend to revive them. |
+| **Deathmatch** | 2–4 | Every kill is a point. First to ten. |
+| **Tag** | 2–4 | Don't be it. Touch someone to pass it on. No guns. |
+| **King of the Hill** | 2–4 | Hold the centre alone for thirty seconds. |
+| **Ball Game** | 2v2 | Shoot or shove the ball into the other team's goal. |
 
 ![Four-player split screen](docs/split-screen.png)
 
 ## Status
 
-Early, but the core loop works end to end: join, move, aim, shoot, kill,
-respawn, score — now with rigged, animated characters rather than capsules,
-one skin per player. The screenshot above is a real frame rendered from the
-project, not a mockup.
+Early, but every mode above is playable end to end, and the screenshot is a
+real frame from the project (horde, four players, zombies closing in), not a
+mockup.
 
 It has **not** been played on real hardware with real controllers. Movement
 feel, camera comfort and controller compatibility are all unverified, and that
@@ -31,6 +39,8 @@ import pipeline.
 | Move | Left stick | `W` `A` `S` `D` |
 | Aim | Right stick | Arrow keys |
 | Fire | Right trigger, `RB`, or `A` | `Space` |
+| Start the round (lobby) | `Start` | `Enter` |
+| Change next mode (lobby) | D-pad ◄ ► | `Tab` |
 
 Up to four gamepads are supported, plus one keyboard seat. The keyboard seat
 exists so the game can be launched and checked without controllers attached;

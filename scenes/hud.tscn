@@ -18,7 +18,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 40
 
 [node name="Label" type="Label" parent="Margin"]
 layout_mode = 2

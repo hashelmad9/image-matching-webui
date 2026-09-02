@@ -51,6 +51,20 @@ guesswork until that happens.
 
 ---
 
+## M2b — The hub and the modes ✅
+
+The game is now a rotating collection of short rounds rather than one
+deathmatch. Each mode is a small rules class; see DESIGN.md.
+
+- [x] Round flow: lobby with mode select → countdown → play → results →
+      next mode, with a session-wins scoreboard
+- [x] **Horde** (co-op): waves, zombie AI, downed state, proximity revive
+- [x] **Deathmatch**, **Tag**, **King of the Hill**, **Ball Game** (2v2)
+- [x] Friendly fire off in co-op; shots pass through teammates
+- [x] 93 headless checks across the flow and every mode
+
+---
+
 ## M3 — Play it, then fix what is wrong
 
 Nothing further is worth building until a human has held a controller. This
@@ -110,10 +124,13 @@ material half is not.
 
 ## M6 — A match, not a sandbox
 
-- [ ] Score limit or time limit, and a round that actually ends
-- [ ] Countdown before a round starts
-- [ ] Between-round screen with final scores
+- [x] Score limit or time limit, and a round that actually ends
+- [x] Countdown before a round starts
+- [x] Between-round screen with final scores
 - [ ] Spawn protection so camping is not free
+- [ ] Bounty on the leader in deathmatch: killing whoever is ahead is worth two
+- [ ] Mutator vote between rounds (low gravity, one-hit kills, ricochet...)
+- [ ] Ricochet as a signature mechanic: shots bounce off cover
 
 ---
 
@@ -123,7 +140,9 @@ material half is not.
       ([Kenney Blaster Kit](https://kenney.nl/assets/blaster-kit) covers the models)
 - [ ] Weapon pickups spawning around the arena
 - [ ] A second arena, and a way to choose between them
-- [ ] Team mode (2v2) as an alternative to free-for-all
+- [x] Team mode (2v2) — the ball game
+- [ ] Pathfinding for horde enemies (they walk into cover and sidestep)
+- [ ] Horde variety: a fast enemy, a tank, a wave boss
 
 ---
 

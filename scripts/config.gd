@@ -58,13 +58,12 @@ const LAYER_WORLD := 1
 const LAYER_PLAYERS := 2
 
 
-## Texture atlas per seat. Kenney's character pack ships four skins, which is
-## exactly MAX_PLAYERS, so each player reads as a different person on screen.
+## Texture atlas per seat; see player_tint() for how four seats stay distinct.
 const PLAYER_SKINS: Array[String] = [
 	"res://assets/characters/survivorMaleB.png",
 	"res://assets/characters/survivorFemaleA.png",
-	"res://assets/characters/zombieA.png",
-	"res://assets/characters/zombieC.png",
+	"res://assets/characters/survivorMaleB.png",
+	"res://assets/characters/survivorFemaleA.png",
 ]
 
 
@@ -91,3 +90,80 @@ static func spawn_point(index: int) -> Vector3:
 		1: return Vector3(inset, PLAYER_HEIGHT * 0.5, inset)
 		2: return Vector3(inset, PLAYER_HEIGHT * 0.5, -inset)
 		_: return Vector3(-inset, PLAYER_HEIGHT * 0.5, inset)
+
+
+# --- physics layers, continued -------------------------------------------
+## Bit 3 in the inspector. Horde enemies.
+const LAYER_ENEMIES := 4
+## Bit 4 in the inspector. The ball in the ball game.
+const LAYER_BALL := 8
+
+# --- match flow -----------------------------------------------------------
+const COUNTDOWN_SECONDS := 3.0
+const RESULTS_SECONDS := 6.0
+## Order modes are played in. The lobby lets players pick where to start.
+const MODE_ROTATION: Array[String] = [
+	"horde", "deathmatch", "tag", "king_of_the_hill", "ball_game",
+]
+
+# --- deathmatch -----------------------------------------------------------
+const DEATHMATCH_SECONDS := 90.0
+const DEATHMATCH_KILL_TARGET := 10
+
+# --- horde ----------------------------------------------------------------
+const HORDE_BASE_ENEMIES := 4
+const HORDE_ENEMIES_PER_WAVE := 2
+const HORDE_WAVE_BREATHER := 4.0
+## Grace period before the first wave, so nobody is swarmed at the whistle.
+const HORDE_FIRST_WAVE_DELAY := 2.5
+const HORDE_SPAWN_INTERVAL := 0.5
+const ENEMY_HEALTH := 36
+const ENEMY_SPEED := 3.6
+## Added to enemy speed every wave, so later waves close distance faster.
+const ENEMY_SPEED_PER_WAVE := 0.15
+const ENEMY_DAMAGE := 10
+const ENEMY_ATTACK_RANGE := 1.6
+const ENEMY_ATTACK_COOLDOWN := 0.9
+## A downed player comes back when a teammate stands this close for this long.
+const REVIVE_RANGE := 2.5
+const REVIVE_SECONDS := 2.0
+
+# --- tag ------------------------------------------------------------------
+const TAG_SECONDS := 60.0
+const TAG_RANGE := 1.6
+const TAG_IT_SPEED := 1.15
+## Seconds after a tag during which it cannot bounce straight back.
+const TAG_IMMUNITY := 1.0
+
+# --- king of the hill -----------------------------------------------------
+const KOTH_SECONDS := 90.0
+const KOTH_RADIUS := 6.0
+## Seconds of uncontested hill time needed to win outright.
+const KOTH_TARGET := 30.0
+
+# --- ball game ------------------------------------------------------------
+const BALL_SECONDS := 90.0
+const BALL_GOALS_TO_WIN := 3
+const BALL_RADIUS := 0.7
+## Impulse a projectile gives the ball.
+const BALL_KICK := 9.0
+## Impulse per second a player gives the ball while running into it.
+const BALL_PUSH := 60.0
+const GOAL_HALF_WIDTH := 6.0
+
+## Zombie skins from the same Kenney pack, used for horde enemies.
+const ENEMY_SKINS: Array[String] = [
+	"res://assets/characters/zombieA.png",
+	"res://assets/characters/zombieC.png",
+]
+
+
+## Players use the two survivor skins with a colour tint, so all four seats
+## stay distinct and the zombie skins are free for enemies.
+static func player_tint(index: int) -> Color:
+	return player_color(index).lerp(Color.WHITE, 0.45)
+
+
+## Team for the 2v2 modes: seats alternate so P1+P3 face P2+P4.
+static func team_of(index: int) -> int:
+	return index % 2
